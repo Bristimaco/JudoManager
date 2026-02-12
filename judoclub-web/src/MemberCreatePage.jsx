@@ -1,9 +1,11 @@
+// Migration procedure (MemberCreatePage.jsx) - volledige file (datepicker, geen 3-velden restanten)
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { Link, useNavigate } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import { Alert, Button, Input, Select } from "./components/ui";
 import { formatDateBE } from "./utils/date";
+import DatePickerInput from "./components/DatePickerInput";
 
 export default function MemberCreatePage() {
   const nav = useNavigate();
@@ -11,7 +13,7 @@ export default function MemberCreatePage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [gender, setGender] = useState("");
-  const [birthdate, setBirthdate] = useState("");
+  const [birthdate, setBirthdate] = useState(""); // ISO yyyy-mm-dd of ""
   const [belt, setBelt] = useState("");
   const [active, setActive] = useState(true);
 
@@ -30,7 +32,6 @@ export default function MemberCreatePage() {
   const [weightCategories, setWeightCategories] = useState([]);
   const [weightLoading, setWeightLoading] = useState(false);
 
-  // enum-driven genders from backend (/api/meta)
   const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
   const [genderMetaLoading, setGenderMetaLoading] = useState(true);
 
@@ -38,11 +39,10 @@ export default function MemberCreatePage() {
     loadMeta();
     loadBelts();
     loadAgeCategories();
-    // weight categories are loaded only after gender is chosen
+    // weight categories pas na gender
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // whenever gender changes: reset weight + reload gender-filtered weight categories
   useEffect(() => {
     setWeightCategory("");
     loadWeightCategories(gender);
@@ -124,12 +124,11 @@ export default function MemberCreatePage() {
         {
           first_name: firstName,
           last_name: lastName,
-          birthdate: birthdate || null,
+          birthdate: birthdate || null, // ✅ rechtstreeks uit datepicker
           belt: belt || null,
           active,
           age_category: ageCategory || null,
           gender: gender || null,
-          // only send weight when gender is chosen
           weight_category: gender ? weightCategory || null : null,
         },
         { headers: { Accept: "application/json" } }
@@ -182,10 +181,15 @@ export default function MemberCreatePage() {
           </div>
         </div>
 
+        {/* Geboortedatum + Leeftijdscategorie (2 kolommen) */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Geboortedatum</label>
-            <Input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} />
+            <DatePickerInput
+              value={birthdate || null}
+              onChange={(iso) => setBirthdate(iso ?? "")}
+              placeholder="Kies geboortedatum..."
+            />
             {birthdate && <div className="mt-1 text-xs text-slate-500">Weergave: {formatDateBE(birthdate)}</div>}
             {fe("birthdate")}
           </div>
@@ -204,7 +208,7 @@ export default function MemberCreatePage() {
           </div>
         </div>
 
-        {/* Consistent with MemberDetail: gender before weight + belt in same row */}
+        {/* Gender + Belt */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Geslacht</label>
@@ -225,7 +229,7 @@ export default function MemberCreatePage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700">Gordel</label>
-            <Select value={belt} onChange={(e) => setBelt(e.target.value)} disabled={beltsLoading}>
+            <Select value={belt ?? ""} onChange={(e) => setBelt(e.target.value)} disabled={beltsLoading}>
               <option value="">{beltsLoading ? "Gordels laden..." : "— Geen / kies —"}</option>
               {belts.map((b) => (
                 <option key={b.id} value={b.label}>
@@ -237,7 +241,7 @@ export default function MemberCreatePage() {
           </div>
         </div>
 
-        {/* Weight category: only enabled once gender is chosen */}
+        {/* Weight category (pas na gender) */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Gewichtscategorie</label>
@@ -247,11 +251,7 @@ export default function MemberCreatePage() {
               disabled={!gender || weightLoading}
             >
               <option value="">
-                {!gender
-                  ? "Kies eerst geslacht..."
-                  : weightLoading
-                    ? "Gewichtscategorieën laden..."
-                    : "— Geen / kies —"}
+                {!gender ? "Kies eerst geslacht..." : weightLoading ? "Gewichtscategorieën laden..." : "— Geen / kies —"}
               </option>
               {weightCategories.map((c) => (
                 <option key={c.id} value={c.label}>

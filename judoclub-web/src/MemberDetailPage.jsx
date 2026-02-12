@@ -1,9 +1,13 @@
+// Migration procedure: volledige MemberDetailPage.jsx (met DatePickerInput + 2 kolommen birthdate/age)
+// ✅ Let op: pas het import pad van DatePickerInput aan aan jouw projectstructuur.
+
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import { Alert, Badge, Button, Input, Select } from "./components/ui";
 import { formatDateBE } from "./utils/date";
+import DatePickerInput from "./components/DatePickerInput";
 
 export default function MemberDetailPage() {
   const { id } = useParams();
@@ -19,7 +23,7 @@ export default function MemberDetailPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [gender, setGender] = useState("");
-  const [birthdate, setBirthdate] = useState("");
+  const [birthdate, setBirthdate] = useState(""); // ✅ ISO yyyy-mm-dd of ""
   const [belt, setBelt] = useState("");
   const [active, setActive] = useState(true);
 
@@ -34,7 +38,6 @@ export default function MemberDetailPage() {
   const [weightCategories, setWeightCategories] = useState([]);
   const [weightLoading, setWeightLoading] = useState(true);
 
-  // Gender enum meta from backend (/api/meta)
   const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
   const [genderMetaLoading, setGenderMetaLoading] = useState(true);
 
@@ -49,7 +52,6 @@ export default function MemberDetailPage() {
   }
 
   async function loadWeightCategories(currentGender) {
-    // Alleen laden als er gender is, anders resetten we de lijst.
     if (!currentGender) {
       setWeightCategories([]);
       setWeightLoading(false);
@@ -98,9 +100,7 @@ export default function MemberDetailPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get(`/api/members/${id}`, {
-        headers: { Accept: "application/json" },
-      });
+      const res = await api.get(`/api/members/${id}`, { headers: { Accept: "application/json" } });
       const m = res.data;
 
       setFirstName(m.first_name ?? "");
@@ -112,7 +112,6 @@ export default function MemberDetailPage() {
       setAgeCategory(m.age_category ?? "");
       setWeightCategory(m.weight_category ?? "");
 
-      // Load weight categories filtered by member gender
       await loadWeightCategories(m.gender ?? "");
     } catch (e) {
       setError(`Laden mislukt (${e?.response?.status ?? "no status"})`);
@@ -129,7 +128,6 @@ export default function MemberDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // When gender changes: reset weightCategory + reload weight categories
   useEffect(() => {
     if (loading) return;
     setWeightCategory("");
@@ -162,7 +160,6 @@ export default function MemberDetailPage() {
           active,
           age_category: ageCategory || null,
           gender: gender || null,
-          // weight_category only meaningful if gender is chosen
           weight_category: gender ? weightCategory || null : null,
         },
         { headers: { Accept: "application/json" } }
@@ -192,9 +189,7 @@ export default function MemberDetailPage() {
     setError("");
 
     try {
-      await api.delete(`/api/members/${id}`, {
-        headers: { Accept: "application/json" },
-      });
+      await api.delete(`/api/members/${id}`, { headers: { Accept: "application/json" } });
       nav("/members");
     } catch (e) {
       setError(`Verwijderen mislukt (${e?.response?.status ?? "no status"})`);
@@ -249,10 +244,15 @@ export default function MemberDetailPage() {
           </div>
         </div>
 
+        {/* ✅ Geboortedatum + Leeftijdscategorie (2 kolommen) */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Geboortedatum</label>
-            <Input type="date" value={birthdate ?? ""} onChange={(e) => setBirthdate(e.target.value)} />
+            <DatePickerInput
+              value={birthdate || null}
+              onChange={(iso) => setBirthdate(iso ?? "")}
+              placeholder="Kies geboortedatum..."
+            />
             {birthdate && <div className="mt-1 text-xs text-slate-500">Weergave: {formatDateBE(birthdate)}</div>}
             {fe("birthdate")}
           </div>
@@ -271,15 +271,11 @@ export default function MemberDetailPage() {
           </div>
         </div>
 
-        {/* Gender BEFORE weight category */}
+        {/* Gender + Belt */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Geslacht</label>
-            <Select
-              value={gender ?? ""}
-              onChange={(e) => setGender(e.target.value)}
-              disabled={genderMetaLoading || !genderMeta}
-            >
+            <Select value={gender ?? ""} onChange={(e) => setGender(e.target.value)} disabled={genderMetaLoading || !genderMeta}>
               <option value="">{genderMetaLoading ? "Geslachten laden..." : "— Geen / kies —"}</option>
               {(genderMeta?.values ?? []).map((v) => (
                 <option key={v} value={v}>
@@ -304,21 +300,13 @@ export default function MemberDetailPage() {
           </div>
         </div>
 
-        {/* Weight category: only editable if gender is chosen */}
+        {/* Weight category */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Gewichtscategorie</label>
-            <Select
-              value={weightCategory}
-              onChange={(e) => setWeightCategory(e.target.value)}
-              disabled={!gender || weightLoading}
-            >
+            <Select value={weightCategory} onChange={(e) => setWeightCategory(e.target.value)} disabled={!gender || weightLoading}>
               <option value="">
-                {!gender
-                  ? "Kies eerst geslacht..."
-                  : weightLoading
-                    ? "Gewichtscategorieën laden..."
-                    : "— Geen / kies —"}
+                {!gender ? "Kies eerst geslacht..." : weightLoading ? "Gewichtscategorieën laden..." : "— Geen / kies —"}
               </option>
               {weightCategories.map((c) => (
                 <option key={c.id} value={c.label}>
@@ -328,7 +316,6 @@ export default function MemberDetailPage() {
             </Select>
             {fe("weight_category")}
           </div>
-
           <div />
         </div>
 
@@ -347,13 +334,7 @@ export default function MemberDetailPage() {
             {saving ? "Opslaan..." : "Opslaan"}
           </Button>
 
-          <Button
-            variant="danger"
-            type="button"
-            onClick={onDelete}
-            disabled={deleting}
-            className="sm:ml-auto"
-          >
+          <Button variant="danger" type="button" onClick={onDelete} disabled={deleting} className="sm:ml-auto">
             {deleting ? "Verwijderen..." : "Verwijder"}
           </Button>
         </div>
