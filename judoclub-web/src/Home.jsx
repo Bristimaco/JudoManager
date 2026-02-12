@@ -41,36 +41,36 @@ function Tile({ title, desc, to, accent = "blue", disabled = false }) {
   );
 }
 
+// MembersSummaryCard.jsx (of inline)
+
 function MembersSummaryCard({ loading, total, genders }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-medium text-slate-600">Leden</div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900">
+          <div className="text-xs font-semibold text-slate-700">Leden</div>
+          <div className="mt-1 text-xl font-semibold text-slate-900">
             {loading ? "—" : total}
           </div>
-          <div className="mt-1 text-sm text-slate-600">
-            Totaal aantal leden
-          </div>
+          <div className="mt-0.5 text-xs text-slate-600">Totaal</div>
         </div>
 
-        <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+        <div className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200">
           Info
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="text-xs font-medium text-slate-600">M</div>
-          <div className="mt-1 text-lg font-semibold text-slate-900">
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className="text-[11px] font-medium text-slate-600">M</div>
+          <div className="mt-0.5 text-base font-semibold text-slate-900">
             {loading ? "—" : (genders.M ?? 0)}
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="text-xs font-medium text-slate-600">V</div>
-          <div className="mt-1 text-lg font-semibold text-slate-900">
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className="text-[11px] font-medium text-slate-600">V</div>
+          <div className="mt-0.5 text-base font-semibold text-slate-900">
             {loading ? "—" : (genders.V ?? 0)}
           </div>
         </div>
@@ -79,27 +79,36 @@ function MembersSummaryCard({ loading, total, genders }) {
   );
 }
 
+// InfoCard.jsx (of inline)
 
 function InfoCard({ title, subtitle, items }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div>
-        <div className="text-sm font-semibold text-slate-900">{title}</div>
-        {subtitle ? <div className="mt-1 text-sm text-slate-600">{subtitle}</div> : null}
+    <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold text-slate-700">{title}</div>
+          {subtitle ? <div className="mt-0.5 text-xs text-slate-600">{subtitle}</div> : null}
+        </div>
+
+        <div className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200">
+          Info
+        </div>
       </div>
 
-      {items?.length ? (
-        <div className="mt-4 space-y-2">
-          {items.map((it) => (
+      <div className="mt-3 space-y-2 flex-1">
+        {items?.length ? (
+          items.map((it) => (
             <div key={it.label} className="flex items-center justify-between gap-3">
-              <div className="text-sm text-slate-700">{it.label}</div>
-              <Badge tone="neutral">{it.value}</Badge>
+              <div className="text-xs text-slate-700">{it.label}</div>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                {it.value}
+              </span>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-4 text-sm text-slate-600">Nog geen data.</div>
-      )}
+          ))
+        ) : (
+          <div className="text-xs text-slate-600">Nog geen data.</div>
+        )}
+      </div>
     </div>
   );
 }
