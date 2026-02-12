@@ -14,7 +14,7 @@ Route::get('/health', function () {
     ]);
 });
 
-Route::get('/meta', function () {
+Route::middleware('auth:sanctum')->get('/meta', function () {
     return response()->json([
         'genders' => [
             'values' => Gender::options(),

@@ -12,14 +12,15 @@ const titles = {
 
 export default function LookupListPage() {
     const { type } = useParams();
-
     const meta = titles[type] ?? { title: "Instellingen", subtitle: "" };
 
     const [items, setItems] = useState([]);
     const [label, setLabel] = useState("");
-    const [gender, setGender] = useState("M");
+    const [gender, setGender] = useState(""); // geen default hardcoded
     const [sortOrder, setSortOrder] = useState("0");
     const [active, setActive] = useState(true);
+
+    const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -41,8 +42,40 @@ export default function LookupListPage() {
         }
     }
 
+    async function loadMeta() {
+        // enkel nodig als we weight_categories beheren
+        if (type !== "weight_categories") {
+            setGenderMeta(null);
+            setGender("");
+            return;
+        }
+
+        setErr("");
+        try {
+            const res = await api.get("/api/meta", { headers: { Accept: "application/json" } });
+            const g = res?.data?.genders;
+
+            if (!g?.values?.length) {
+                setGenderMeta(null);
+                setGender("");
+                setErr("Meta gegevens bevatten geen genders (genders.values is leeg).");
+                return;
+            }
+
+            setGenderMeta(g);
+            // default: eerste enum waarde
+            setGender((prev) => (prev && g.values.includes(prev) ? prev : g.values[0]));
+        } catch (e) {
+            setGenderMeta(null);
+            setGender("");
+            setErr(`Meta laden mislukt (${e?.response?.status ?? "no status"})`);
+        }
+    }
+
     useEffect(() => {
+        // bij type change: herlaad lookups + (optioneel) meta
         load();
+        loadMeta();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [type]);
 
@@ -62,10 +95,16 @@ export default function LookupListPage() {
                 },
                 { headers: { Accept: "application/json" } }
             );
+
             setLabel("");
             setSortOrder("0");
             setActive(true);
-            if (type === "weight_categories") setGender("M");
+
+            // reset gender terug naar eerste enum waarde (als weight)
+            if (type === "weight_categories" && genderMeta?.values?.length) {
+                setGender(genderMeta.values[0]);
+            }
+
             await load();
         } catch (e) {
             setErr(e?.response?.data?.message ?? `Opslaan mislukt (${e?.response?.status ?? "no status"})`);
@@ -78,7 +117,12 @@ export default function LookupListPage() {
         try {
             await api.put(
                 `/api/lookups/${item.id}`,
-                { label: item.label, sort_order: item.sort_order, active: !item.active, ...(type === "weight_categories" ? { gender: item.gender } : {}), },
+                {
+                    label: item.label,
+                    sort_order: item.sort_order,
+                    active: !item.active,
+                    ...(type === "weight_categories" ? { gender: item.gender } : {}),
+                },
                 { headers: { Accept: "application/json" } }
             );
             await load();
@@ -100,13 +144,19 @@ export default function LookupListPage() {
     }
 
     const rows = useMemo(() => items, [items]);
+    const genderLabel = (v) => genderMeta?.labels?.[v] ?? v ?? "-";
+
+    const disableSubmit =
+        saving ||
+        !label.trim() ||
+        (type === "weight_categories" && (!genderMeta || !gender)); // geen meta => geen geldige gender
 
     return (
         <AppLayout
             title={meta.title}
             subtitle={meta.subtitle}
             actions={
-                <Button variant="primary" onClick={load} disabled={loading}>
+                <Button variant="primary" onClick={() => { load(); if (type === "weight_categories") loadMeta(); }} disabled={loading}>
                     Refresh
                 </Button>
             }
@@ -129,10 +179,18 @@ export default function LookupListPage() {
                         <select
                             value={gender}
                             onChange={(e) => setGender(e.target.value)}
-                            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                            disabled={!genderMeta}
+                            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm disabled:bg-slate-100"
                         >
-                            <option value="M">M</option>
-                            <option value="F">F</option>
+                            {!genderMeta ? (
+                                <option value="">(Genders laden...)</option>
+                            ) : (
+                                genderMeta.values.map((v) => (
+                                    <option key={v} value={v}>
+                                        {genderLabel(v)}
+                                    </option>
+                                ))
+                            )}
                         </select>
                     </div>
                 )}
@@ -153,7 +211,7 @@ export default function LookupListPage() {
                         Actief
                     </label>
 
-                    <Button variant="blue" type="submit" disabled={saving || !label.trim() || (type === "weight_categories" && !gender)}>
+                    <Button variant="blue" type="submit" disabled={disableSubmit}>
                         {saving ? "Toevoegen..." : "Toevoegen"}
                     </Button>
                 </div>
@@ -187,9 +245,7 @@ export default function LookupListPage() {
                                 <tr key={it.id} className="border-b last:border-b-0 hover:bg-slate-50">
                                     <td className="py-3 pr-4 font-medium text-slate-900">{it.label}</td>
                                     {type === "weight_categories" && (
-                                        <td className="py-3 pr-4 text-slate-700">
-                                            {it.gender === "M" ? "M" : it.gender === "F" ? "V" : it.gender ?? "-"}
-                                        </td>
+                                        <td className="py-3 pr-4 text-slate-700">{genderLabel(it.gender)}</td>
                                     )}
                                     <td className="py-3 pr-4 text-slate-700">{it.sort_order}</td>
                                     <td className="py-3 pr-4">

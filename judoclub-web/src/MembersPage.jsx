@@ -95,6 +95,7 @@ export default function MembersPage() {
                         <thead>
                             <tr className="text-left text-slate-600 border-b">
                                 <th className="py-3 pr-4">Naam</th>
+                                <th className="py-3 pr-4">Geslacht</th>
                                 <th className="py-3 pr-4">Geboortedatum</th>
                                 <th className="py-3 pr-4">Gordel</th>
                                 <th className="py-3 pr-4">Leeftijdscategorie</th>
@@ -110,6 +111,7 @@ export default function MembersPage() {
                                             {m.last_name} {m.first_name}
                                         </Link>
                                     </td>
+                                    <td className="py-3 pr-4 text-slate-700">{m.gender ?? "_"}</td>
                                     <td className="py-3 pr-4 text-slate-700">{formatDateBE(m.birthdate)}</td>
                                     <td className="py-3 pr-4 text-slate-700">{m.belt ?? "-"}</td>
                                     <td className="py-3 pr-4 text-slate-700">{m.age_category ?? "-"}</td>

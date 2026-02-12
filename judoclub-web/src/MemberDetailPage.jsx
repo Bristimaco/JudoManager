@@ -18,6 +18,7 @@ export default function MemberDetailPage() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [gender, setGender] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [belt, setBelt] = useState("");
   const [active, setActive] = useState(true);
@@ -32,7 +33,6 @@ export default function MemberDetailPage() {
   const [weightCategory, setWeightCategory] = useState("");
   const [weightCategories, setWeightCategories] = useState([]);
   const [weightLoading, setWeightLoading] = useState(true);
-
 
   async function loadWeightCategories() {
     setWeightLoading(true);
@@ -85,6 +85,7 @@ export default function MemberDetailPage() {
       setFirstName(m.first_name ?? "");
       setLastName(m.last_name ?? "");
       const bd = m.birthdate ? String(m.birthdate).split("T")[0] : "";
+      setGender(m.gender);
       setBirthdate(bd);
       setBelt(m.belt ?? "");
       setActive(!!m.active);
@@ -129,6 +130,7 @@ export default function MemberDetailPage() {
           active,
           age_category: ageCategory || null,
           weight_category: weightCategory || null,
+          gender,
         },
         { headers: { Accept: "application/json" } }
       );
@@ -242,7 +244,8 @@ export default function MemberDetailPage() {
             </Select>
             {fe("age_category")}
           </div>
-
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">
               Gewichtscategorie
@@ -250,8 +253,7 @@ export default function MemberDetailPage() {
             <Select
               value={weightCategory}
               onChange={(e) => setWeightCategory(e.target.value)}
-              disabled={weightLoading}
-            >
+              disabled={weightLoading}>
               <option value="">
                 {weightLoading ? "Gewichtscategorieën laden..." : "— Geen / kies —"}
               </option>
@@ -281,6 +283,17 @@ export default function MemberDetailPage() {
           </div>
         </div>
 
+        <div className="grid sm:grid-cols-2 gap-4">
+          <label className="block text-sm font-medium text-slate-700">Geslacht</label>
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm">
+            <option value="M">M</option>
+            <option value="F">F</option>
+          </select>
+        </div>
+
         <label className="flex items-center gap-3 select-none">
           <input
             type="checkbox"
@@ -307,6 +320,6 @@ export default function MemberDetailPage() {
           </Button>
         </div>
       </form>
-    </AppLayout>
+    </AppLayout >
   );
 }
