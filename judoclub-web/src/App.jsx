@@ -42,7 +42,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 24, maxWidth: 520 }}>
-      <h1>Zoutman</h1>
+      <h1>Judo-Manager</h1>
 
       <div style={{ display: "grid", gap: 8 }}>
         <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email" />
