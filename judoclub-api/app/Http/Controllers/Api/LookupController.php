@@ -6,19 +6,33 @@ use App\Http\Controllers\Controller;
 use App\Models\Lookup;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Enums\Gender;
 
 class LookupController extends Controller
 {
     public function index(Request $request)
     {
         $type = $request->query('type');
+        $gender = $request->query('gender');
 
         $request->validate([
             'type' => ['required', 'string', Rule::in(['belts', 'age_categories', 'weight_categories'])],
+            // gender enkel zinvol bij weight_categories, maar we valideren hier alvast
+            'gender' => ['nullable', Rule::in(Gender::options())],
         ]);
 
-        return Lookup::query()
-            ->where('type', $type)
+        $q = Lookup::query()->where('type', $type);
+
+        // Alleen relevante weight categories ophalen op basis van gender
+        if ($type === 'weight_categories' && $gender) {
+            // Als je géén unisex wil: enkel exact match
+            $q->where('gender', $gender);
+
+            // Als je ooit unisex wil (gender NULL):
+            // $q->where(fn($sub) => $sub->where('gender', $gender)->orWhereNull('gender'));
+        }
+
+        return $q
             ->orderByRaw("CASE WHEN gender IS NULL THEN 1 ELSE 0 END") // nulls last
             ->orderBy('gender')                                       // M/F eerst
             ->orderBy('sort_order')
@@ -30,12 +44,15 @@ class LookupController extends Controller
     {
         $data = $request->validate([
             'type' => ['required', 'string', Rule::in(['belts', 'age_categories', 'weight_categories'])],
+
+            // Bij weight_categories: gender REQUIRED en moet M/V zijn
+            // Bij andere types: gender moet NULL zijn (we strippen het hieronder sowieso)
             'gender' => [
                 Rule::requiredIf(fn() => $request->input('type') === 'weight_categories'),
                 'nullable',
-                'string',
-                'max:10',
+                Rule::in(Gender::options()),
             ],
+
             'label' => ['required', 'string', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'active' => ['sometimes', 'boolean'],
@@ -43,15 +60,12 @@ class LookupController extends Controller
 
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
+        // Forceer gender = null behalve voor weight_categories
         if ($data['type'] !== 'weight_categories') {
             $data['gender'] = null;
-        } else {
-            // bij weight_categories moet gender aanwezig zijn (validatie doet dit),
-            // maar zorg dat key zeker bestaat:
-            $data['gender'] = $data['gender'] ?? null;
         }
 
-        // Unique per type + (gender/null) + label (NULL-safe)
+        // Unique per type + gender(NULL-safe) + label
         $existsQuery = Lookup::where('type', $data['type'])
             ->where('label', $data['label']);
 
@@ -74,7 +88,12 @@ class LookupController extends Controller
     public function update(Request $request, Lookup $lookup)
     {
         $data = $request->validate([
-            'gender' => ['required', 'string', 'max:10'],
+            // gender enkel verplicht bij weight_categories
+            'gender' => [
+                Rule::requiredIf(fn() => $lookup->type === 'weight_categories'),
+                'nullable',
+                Rule::in(Gender::options()),
+            ],
             'label' => ['required', 'string', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'active' => ['sometimes', 'boolean'],
@@ -82,11 +101,20 @@ class LookupController extends Controller
 
         $data['sort_order'] = $data['sort_order'] ?? $lookup->sort_order;
 
-        // unique per type/label (excluding current)
+        // Forceer gender = null behalve voor weight_categories
+        if ($lookup->type !== 'weight_categories') {
+            $data['gender'] = null;
+        }
+
+        // Unique per type + gender + label (excluding current)
         $exists = Lookup::where('type', $lookup->type)
-            ->where('gender', $data['gender'])
             ->where('label', $data['label'])
             ->where('id', '!=', $lookup->id)
+            ->when(
+                is_null($data['gender']),
+                fn($q) => $q->whereNull('gender'),
+                fn($q) => $q->where('gender', $data['gender'])
+            )
             ->exists();
 
         if ($exists) {

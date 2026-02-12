@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Member;
 use Illuminate\Http\Request;
+use App\Enums\Gender;
+use Illuminate\Validation\Rule;
 
 class MemberController extends Controller
 {
@@ -34,6 +36,7 @@ class MemberController extends Controller
             'active' => ['sometimes', 'boolean'],
             'age_category' => ['nullable', 'string', 'max:50'],
             'weight_category' => ['nullable', 'string', 'max:50'],
+            'gender' => ['nullable', Rule::in(Gender::options())],
         ]);
 
         $member = Member::create($data);
