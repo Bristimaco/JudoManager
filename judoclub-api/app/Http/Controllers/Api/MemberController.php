@@ -39,6 +39,9 @@ class MemberController extends Controller
             'gender' => ['nullable', Rule::in(Gender::options())],
         ]);
 
+        // optioneel: active default false indien niet meegestuurd
+        // $data['active'] = $request->boolean('active');
+
         $member = Member::create($data);
 
         return response()->json($member, 201);
@@ -59,8 +62,11 @@ class MemberController extends Controller
             'active' => ['sometimes', 'boolean'],
             'age_category' => ['nullable', 'string', 'max:50'],
             'weight_category' => ['nullable', 'string', 'max:50'],
-            'gender' => ['nullable', 'in:male,female'],
+            'gender' => ['nullable', Rule::in(Gender::options())], // ✅ FIX
         ]);
+
+        // optioneel: als active aanwezig is, normaliseren naar boolean
+        // if ($request->has('active')) $data['active'] = $request->boolean('active');
 
         $member->update($data);
 

@@ -34,11 +34,32 @@ export default function MemberDetailPage() {
   const [weightCategories, setWeightCategories] = useState([]);
   const [weightLoading, setWeightLoading] = useState(true);
 
-  async function loadWeightCategories() {
+  // Gender enum meta from backend (/api/meta)
+  const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
+  const [genderMetaLoading, setGenderMetaLoading] = useState(true);
+
+  async function loadMeta() {
+    setGenderMetaLoading(true);
+    try {
+      const res = await api.get("/api/meta", { headers: { Accept: "application/json" } });
+      setGenderMeta(res?.data?.genders ?? null);
+    } finally {
+      setGenderMetaLoading(false);
+    }
+  }
+
+  async function loadWeightCategories(currentGender) {
+    // Alleen laden als er gender is, anders resetten we de lijst.
+    if (!currentGender) {
+      setWeightCategories([]);
+      setWeightLoading(false);
+      return;
+    }
+
     setWeightLoading(true);
     try {
       const res = await api.get("/api/lookups", {
-        params: { type: "weight_categories" },
+        params: { type: "weight_categories", gender: currentGender },
         headers: { Accept: "application/json" },
       });
       setWeightCategories((res.data ?? []).filter((x) => x.active));
@@ -84,13 +105,15 @@ export default function MemberDetailPage() {
 
       setFirstName(m.first_name ?? "");
       setLastName(m.last_name ?? "");
-      const bd = m.birthdate ? String(m.birthdate).split("T")[0] : "";
-      setGender(m.gender);
-      setBirthdate(bd);
+      setGender(m.gender ?? "");
+      setBirthdate(m.birthdate ? String(m.birthdate).split("T")[0] : "");
       setBelt(m.belt ?? "");
       setActive(!!m.active);
       setAgeCategory(m.age_category ?? "");
       setWeightCategory(m.weight_category ?? "");
+
+      // Load weight categories filtered by member gender
+      await loadWeightCategories(m.gender ?? "");
     } catch (e) {
       setError(`Laden mislukt (${e?.response?.status ?? "no status"})`);
     } finally {
@@ -99,19 +122,28 @@ export default function MemberDetailPage() {
   }
 
   useEffect(() => {
+    loadMeta();
     load();
     loadBelts();
     loadAgeCategories();
-    loadWeightCategories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // When gender changes: reset weightCategory + reload weight categories
+  useEffect(() => {
+    if (loading) return;
+    setWeightCategory("");
+    loadWeightCategories(gender);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gender]);
 
   function fe(name) {
     const msgs = fieldErrors?.[name];
     if (!msgs?.length) return null;
     return <div className="mt-1 text-sm text-red-600">{msgs[0]}</div>;
   }
+
+  const genderLabel = (v) => genderMeta?.labels?.[v] ?? v;
 
   async function onSave(e) {
     e.preventDefault();
@@ -129,8 +161,9 @@ export default function MemberDetailPage() {
           belt: belt || null,
           active,
           age_category: ageCategory || null,
-          weight_category: weightCategory || null,
-          gender,
+          gender: gender || null,
+          // weight_category only meaningful if gender is chosen
+          weight_category: gender ? weightCategory || null : null,
         },
         { headers: { Accept: "application/json" } }
       );
@@ -225,17 +258,9 @@ export default function MemberDetailPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700">
-              Leeftijdscategorie
-            </label>
-            <Select
-              value={ageCategory}
-              onChange={(e) => setAgeCategory(e.target.value)}
-              disabled={ageLoading}
-            >
-              <option value="">
-                {ageLoading ? "Leeftijdscategorieën laden..." : "— Geen / kies —"}
-              </option>
+            <label className="block text-sm font-medium text-slate-700">Leeftijdscategorie</label>
+            <Select value={ageCategory} onChange={(e) => setAgeCategory(e.target.value)} disabled={ageLoading}>
+              <option value="">{ageLoading ? "Leeftijdscategorieën laden..." : "— Geen / kies —"}</option>
               {ageCategories.map((c) => (
                 <option key={c.id} value={c.label}>
                   {c.label}
@@ -245,17 +270,55 @@ export default function MemberDetailPage() {
             {fe("age_category")}
           </div>
         </div>
+
+        {/* Gender BEFORE weight category */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700">
-              Gewichtscategorie
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Geslacht</label>
+            <Select
+              value={gender ?? ""}
+              onChange={(e) => setGender(e.target.value)}
+              disabled={genderMetaLoading || !genderMeta}
+            >
+              <option value="">{genderMetaLoading ? "Geslachten laden..." : "— Geen / kies —"}</option>
+              {(genderMeta?.values ?? []).map((v) => (
+                <option key={v} value={v}>
+                  {genderLabel(v)}
+                </option>
+              ))}
+            </Select>
+            {fe("gender")}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Gordel</label>
+            <Select value={belt ?? ""} onChange={(e) => setBelt(e.target.value)} disabled={beltsLoading}>
+              <option value="">{beltsLoading ? "Gordels laden..." : "— Geen / kies —"}</option>
+              {belts.map((b) => (
+                <option key={b.id} value={b.label}>
+                  {b.label}
+                </option>
+              ))}
+            </Select>
+            {fe("belt")}
+          </div>
+        </div>
+
+        {/* Weight category: only editable if gender is chosen */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Gewichtscategorie</label>
             <Select
               value={weightCategory}
               onChange={(e) => setWeightCategory(e.target.value)}
-              disabled={weightLoading}>
+              disabled={!gender || weightLoading}
+            >
               <option value="">
-                {weightLoading ? "Gewichtscategorieën laden..." : "— Geen / kies —"}
+                {!gender
+                  ? "Kies eerst geslacht..."
+                  : weightLoading
+                    ? "Gewichtscategorieën laden..."
+                    : "— Geen / kies —"}
               </option>
               {weightCategories.map((c) => (
                 <option key={c.id} value={c.label}>
@@ -266,32 +329,7 @@ export default function MemberDetailPage() {
             {fe("weight_category")}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700">Gordel</label>
-            <Select value={belt ?? ""} onChange={(e) => setBelt(e.target.value)} disabled={beltsLoading}>
-              <option value="">
-                {beltsLoading ? "Gordels laden..." : "— Geen / kies —"}
-              </option>
-              {belts.map((b) => (
-                <option key={b.id} value={b.label}>
-                  {b.label}
-                </option>
-              ))}
-            </Select>
-
-            {fe("belt")}
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          <label className="block text-sm font-medium text-slate-700">Geslacht</label>
-          <select
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm">
-            <option value="M">M</option>
-            <option value="F">F</option>
-          </select>
+          <div />
         </div>
 
         <label className="flex items-center gap-3 select-none">
@@ -320,6 +358,6 @@ export default function MemberDetailPage() {
           </Button>
         </div>
       </form>
-    </AppLayout >
+    </AppLayout>
   );
 }
