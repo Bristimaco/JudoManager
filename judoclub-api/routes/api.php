@@ -6,12 +6,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Enums\Gender;
+use App\Http\Controllers\Api\MemberImportExportController;
 
 Route::get('/health', function () {
     return response()->json([
         'status' => 'ok',
         'app' => 'JudoClub API',
     ]);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/members/export', [MemberImportExportController::class, 'export']);
+    Route::post('/members/import', [MemberImportExportController::class, 'import']);
 });
 
 Route::middleware('auth:sanctum')->get('/meta', function () {

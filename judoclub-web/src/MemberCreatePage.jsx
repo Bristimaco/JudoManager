@@ -15,6 +15,7 @@ export default function MemberCreatePage() {
   const [gender, setGender] = useState("");
   const [birthdate, setBirthdate] = useState(""); // ISO yyyy-mm-dd of ""
   const [belt, setBelt] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
   const [active, setActive] = useState(true);
 
   const [saving, setSaving] = useState(false);
@@ -122,6 +123,7 @@ export default function MemberCreatePage() {
       await api.post(
         "/api/members",
         {
+          license_number: licenseNumber,
           first_name: firstName,
           last_name: lastName,
           birthdate: birthdate || null, // ✅ rechtstreeks uit datepicker
@@ -265,15 +267,24 @@ export default function MemberCreatePage() {
           <div />
         </div>
 
-        <label className="flex items-center gap-3 select-none">
-          <input
-            type="checkbox"
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
-          />
-          <span className="text-sm text-slate-700">Actief lid</span>
-        </label>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Licentienummer</label>
+            <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} />
+            {fe("license_number")}
+          </div>
+          <div>
+            <label className="flex items-center gap-3 select-none">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+              />
+              <span className="text-sm text-slate-700">Actief lid</span>
+            </label>
+          </div>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Button variant="primary" type="submit" disabled={saving}>

@@ -29,6 +29,7 @@ class MemberController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'license_number' => ['required', 'integer', 'min:1', Rule::unique('members', 'license_number')],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'birthdate' => ['nullable', 'date'],
@@ -55,6 +56,7 @@ class MemberController extends Controller
     public function update(Request $request, Member $member)
     {
         $data = $request->validate([
+            'license_number' => ['required', 'integer', 'min:1', Rule::unique('members', 'license_number')->ignore($member->id)],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'birthdate' => ['nullable', 'date'],

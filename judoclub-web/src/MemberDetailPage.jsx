@@ -22,6 +22,7 @@ export default function MemberDetailPage() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
   const [gender, setGender] = useState("");
   const [birthdate, setBirthdate] = useState(""); // ✅ ISO yyyy-mm-dd of ""
   const [belt, setBelt] = useState("");
@@ -105,6 +106,7 @@ export default function MemberDetailPage() {
 
       setFirstName(m.first_name ?? "");
       setLastName(m.last_name ?? "");
+      setLicenseNumber(m.license_number ?? "");
       setGender(m.gender ?? "");
       setBirthdate(m.birthdate ? String(m.birthdate).split("T")[0] : "");
       setBelt(m.belt ?? "");
@@ -153,6 +155,7 @@ export default function MemberDetailPage() {
       await api.put(
         `/api/members/${id}`,
         {
+          license_number: licenseNumber,
           first_name: firstName,
           last_name: lastName,
           birthdate: birthdate || null,
@@ -319,15 +322,24 @@ export default function MemberDetailPage() {
           <div />
         </div>
 
-        <label className="flex items-center gap-3 select-none">
-          <input
-            type="checkbox"
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
-          />
-          <span className="text-sm text-slate-700">Actief lid</span>
-        </label>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Licentienummer</label>
+            <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} />
+            {fe("license_number")}
+          </div>
+          <div>
+            <label className="flex items-center gap-3 select-none">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+              />
+              <span className="text-sm text-slate-700">Actief lid</span>
+            </label>
+          </div>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Button variant="primary" type="submit" disabled={saving}>
