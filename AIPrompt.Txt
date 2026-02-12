@@ -1,5 +1,2 @@
-Ik wil de volgende aanpassingen:
-1. de drie blokken met leden informatie mogen samen genomen worden.  Het totaal aantal leden en dan daaronder opsplitsing per geslacht
-2. Het blok 'snelle acties' mag worden weggehaald
-3. Het blok 'verdeling gordels' zou mogen gesorteerd wroden van hoog aantal naar laag aantal 
-4. De blokken 'leeftijdscategorieen' en 'datakwaliteit' mogen weg
+Maak het blok wat compacter.
+Het infoblok over de leden en de gordels moet eigenlijk meer als een 'extra informatie' blok aanvoelen en mag de echte tegels voor functionaliteit niet overheersen zoals nu het geval is
