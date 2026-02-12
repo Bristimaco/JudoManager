@@ -17,6 +17,7 @@ export default function LookupListPage() {
 
     const [items, setItems] = useState([]);
     const [label, setLabel] = useState("");
+    const [gender, setGender] = useState("M");
     const [sortOrder, setSortOrder] = useState("0");
     const [active, setActive] = useState(true);
 
@@ -54,6 +55,7 @@ export default function LookupListPage() {
                 "/api/lookups",
                 {
                     type,
+                    ...(type === "weight_categories" ? { gender } : {}),
                     label,
                     sort_order: Number(sortOrder || 0),
                     active,
@@ -63,6 +65,7 @@ export default function LookupListPage() {
             setLabel("");
             setSortOrder("0");
             setActive(true);
+            if (type === "weight_categories") setGender("M");
             await load();
         } catch (e) {
             setErr(e?.response?.data?.message ?? `Opslaan mislukt (${e?.response?.status ?? "no status"})`);
@@ -75,7 +78,7 @@ export default function LookupListPage() {
         try {
             await api.put(
                 `/api/lookups/${item.id}`,
-                { label: item.label, sort_order: item.sort_order, active: !item.active },
+                { label: item.label, sort_order: item.sort_order, active: !item.active, ...(type === "weight_categories" ? { gender: item.gender } : {}), },
                 { headers: { Accept: "application/json" } }
             );
             await load();
@@ -120,6 +123,20 @@ export default function LookupListPage() {
                     <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nieuwe waarde..." />
                 </div>
 
+                {type === "weight_categories" && (
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700">Geslacht</label>
+                        <select
+                            value={gender}
+                            onChange={(e) => setGender(e.target.value)}
+                            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                        >
+                            <option value="M">M</option>
+                            <option value="F">F</option>
+                        </select>
+                    </div>
+                )}
+
                 <div>
                     <label className="block text-sm font-medium text-slate-700">Volgorde</label>
                     <Input value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />
@@ -136,7 +153,7 @@ export default function LookupListPage() {
                         Actief
                     </label>
 
-                    <Button variant="blue" type="submit" disabled={saving || !label.trim()}>
+                    <Button variant="blue" type="submit" disabled={saving || !label.trim() || (type === "weight_categories" && !gender)}>
                         {saving ? "Toevoegen..." : "Toevoegen"}
                     </Button>
                 </div>
@@ -159,6 +176,7 @@ export default function LookupListPage() {
                         <thead>
                             <tr className="text-left text-slate-600 border-b">
                                 <th className="py-3 pr-4">Waarde</th>
+                                {type === "weight_categories" && <th className="py-3 pr-4">Geslacht</th>}
                                 <th className="py-3 pr-4">Volgorde</th>
                                 <th className="py-3 pr-4">Status</th>
                                 <th className="py-3"></th>
@@ -168,6 +186,11 @@ export default function LookupListPage() {
                             {rows.map((it) => (
                                 <tr key={it.id} className="border-b last:border-b-0 hover:bg-slate-50">
                                     <td className="py-3 pr-4 font-medium text-slate-900">{it.label}</td>
+                                    {type === "weight_categories" && (
+                                        <td className="py-3 pr-4 text-slate-700">
+                                            {it.gender === "M" ? "M" : it.gender === "F" ? "V" : it.gender ?? "-"}
+                                        </td>
+                                    )}
                                     <td className="py-3 pr-4 text-slate-700">{it.sort_order}</td>
                                     <td className="py-3 pr-4">
                                         <Badge tone={it.active ? "ok" : "neutral"}>{it.active ? "Actief" : "Inactief"}</Badge>
