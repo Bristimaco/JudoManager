@@ -1,0 +1,2 @@
+Kan je dit eens uitvoeren voor MemberPage.jsx
+Hou er rekening mee dat ik de pagination als een aparte component in pagination.jsx heb gestoken

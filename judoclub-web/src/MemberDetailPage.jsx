@@ -1,6 +1,3 @@
-// Migration procedure: volledige MemberDetailPage.jsx (met DatePickerInput + 2 kolommen birthdate/age)
-// ✅ Let op: pas het import pad van DatePickerInput aan aan jouw projectstructuur.
-
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -24,7 +21,7 @@ export default function MemberDetailPage() {
   const [lastName, setLastName] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [gender, setGender] = useState("");
-  const [birthdate, setBirthdate] = useState(""); // ✅ ISO yyyy-mm-dd of ""
+  const [birthdate, setBirthdate] = useState(""); // ISO yyyy-mm-dd of ""
   const [belt, setBelt] = useState("");
   const [active, setActive] = useState(true);
 
@@ -42,11 +39,22 @@ export default function MemberDetailPage() {
   const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
   const [genderMetaLoading, setGenderMetaLoading] = useState(true);
 
+  // ✅ helper: ondersteunt zowel array response als paginator {data, meta, links}
+  function pluckData(res) {
+    if (!res) return [];
+    const d = res.data;
+    return Array.isArray(d) ? d : (d?.data ?? []);
+  }
+
   async function loadMeta() {
     setGenderMetaLoading(true);
     try {
       const res = await api.get("/api/meta", { headers: { Accept: "application/json" } });
       setGenderMeta(res?.data?.genders ?? null);
+    } catch (e) {
+      setGenderMeta(null);
+      // niet hard-failen, maar wel info geven
+      setError((prev) => prev || `Meta laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
     } finally {
       setGenderMetaLoading(false);
     }
@@ -62,10 +70,15 @@ export default function MemberDetailPage() {
     setWeightLoading(true);
     try {
       const res = await api.get("/api/lookups", {
-        params: { type: "weight_categories", gender: currentGender },
+        params: { type: "weight_categories", gender: currentGender, per_page: 200, page: 1 },
         headers: { Accept: "application/json" },
       });
-      setWeightCategories((res.data ?? []).filter((x) => x.active));
+
+      const data = pluckData(res);
+      setWeightCategories(data.filter((x) => x.active));
+    } catch (e) {
+      setWeightCategories([]);
+      setError((prev) => prev || `Gewichtscategorieën laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
     } finally {
       setWeightLoading(false);
     }
@@ -75,10 +88,15 @@ export default function MemberDetailPage() {
     setAgeLoading(true);
     try {
       const res = await api.get("/api/lookups", {
-        params: { type: "age_categories" },
+        params: { type: "age_categories", per_page: 200, page: 1 },
         headers: { Accept: "application/json" },
       });
-      setAgeCategories((res.data ?? []).filter((x) => x.active));
+
+      const data = pluckData(res);
+      setAgeCategories(data.filter((x) => x.active));
+    } catch (e) {
+      setAgeCategories([]);
+      setError((prev) => prev || `Leeftijdscategorieën laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
     } finally {
       setAgeLoading(false);
     }
@@ -88,10 +106,15 @@ export default function MemberDetailPage() {
     setBeltsLoading(true);
     try {
       const res = await api.get("/api/lookups", {
-        params: { type: "belts" },
+        params: { type: "belts", per_page: 200, page: 1 },
         headers: { Accept: "application/json" },
       });
-      setBelts((res.data ?? []).filter((x) => x.active));
+
+      const data = pluckData(res);
+      setBelts(data.filter((x) => x.active));
+    } catch (e) {
+      setBelts([]);
+      setError((prev) => prev || `Gordels laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
     } finally {
       setBeltsLoading(false);
     }
@@ -114,9 +137,11 @@ export default function MemberDetailPage() {
       setAgeCategory(m.age_category ?? "");
       setWeightCategory(m.weight_category ?? "");
 
+      // ✅ dit kan nu niet meer crashen door paginated lookups
       await loadWeightCategories(m.gender ?? "");
     } catch (e) {
-      setError(`Laden mislukt (${e?.response?.status ?? "no status"})`);
+      console.error("MEMBER LOAD ERROR", e);
+      setError(`Laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
     } finally {
       setLoading(false);
     }
@@ -177,7 +202,7 @@ export default function MemberDetailPage() {
         setFieldErrors(data.errors);
         setError("Controleer de velden.");
       } else {
-        setError(`Opslaan mislukt (${status ?? "no status"})`);
+        setError(`Opslaan mislukt (${status ?? e?.message ?? "no status"})`);
       }
     } finally {
       setSaving(false);
@@ -195,7 +220,7 @@ export default function MemberDetailPage() {
       await api.delete(`/api/members/${id}`, { headers: { Accept: "application/json" } });
       nav("/members");
     } catch (e) {
-      setError(`Verwijderen mislukt (${e?.response?.status ?? "no status"})`);
+      setError(`Verwijderen mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
       setDeleting(false);
     }
   }
@@ -247,7 +272,6 @@ export default function MemberDetailPage() {
           </div>
         </div>
 
-        {/* ✅ Geboortedatum + Leeftijdscategorie (2 kolommen) */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Geboortedatum</label>
@@ -274,7 +298,6 @@ export default function MemberDetailPage() {
           </div>
         </div>
 
-        {/* Gender + Belt */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Geslacht</label>
@@ -303,7 +326,6 @@ export default function MemberDetailPage() {
           </div>
         </div>
 
-        {/* Weight category */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Gewichtscategorie</label>

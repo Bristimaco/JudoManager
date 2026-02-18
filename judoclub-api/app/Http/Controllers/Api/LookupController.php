@@ -13,31 +13,24 @@ class LookupController extends Controller
     public function index(Request $request)
     {
         $type = $request->query('type');
-        $gender = $request->query('gender');
+        $gender = $request->query('gender'); // optioneel voor weight_categories
 
         $request->validate([
             'type' => ['required', 'string', Rule::in(['belts', 'age_categories', 'weight_categories'])],
-            // gender enkel zinvol bij weight_categories, maar we valideren hier alvast
-            'gender' => ['nullable', Rule::in(Gender::options())],
+            'gender' => ['nullable', Rule::in(\App\Enums\Gender::options())],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
-        $q = Lookup::query()->where('type', $type);
+        $perPage = (int) ($request->query('per_page', 50));
 
-        // Alleen relevante weight categories ophalen op basis van gender
-        if ($type === 'weight_categories' && $gender) {
-            // Als je géén unisex wil: enkel exact match
-            $q->where('gender', $gender);
-
-            // Als je ooit unisex wil (gender NULL):
-            // $q->where(fn($sub) => $sub->where('gender', $gender)->orWhereNull('gender'));
-        }
-
-        return $q
-            ->orderByRaw("CASE WHEN gender IS NULL THEN 1 ELSE 0 END") // nulls last
-            ->orderBy('gender')                                       // M/F eerst
+        return Lookup::query()
+            ->where('type', $type)
+            ->when($type === 'weight_categories' && $gender, fn($q) => $q->where('gender', $gender))
+            ->orderByRaw("CASE WHEN gender IS NULL THEN 1 ELSE 0 END")
+            ->orderBy('gender')
             ->orderBy('sort_order')
             ->orderBy('label')
-            ->get();
+            ->paginate($perPage);
     }
 
     public function store(Request $request)

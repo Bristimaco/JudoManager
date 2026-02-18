@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import { Alert, Button, Input, Badge } from "./components/ui";
 import { api } from "./api";
+import Pagination from "./components/Pagination";
 
 const titles = {
     belts: { title: "Gordels", subtitle: "Beheer gordels." },
@@ -12,7 +13,7 @@ const titles = {
 
 export default function LookupListPage() {
     const { type } = useParams();
-    const meta = titles[type] ?? { title: "Instellingen", subtitle: "" };
+    const pageMeta = titles[type] ?? { title: "Instellingen", subtitle: "" };
 
     const [items, setItems] = useState([]);
     const [label, setLabel] = useState("");
@@ -21,6 +22,9 @@ export default function LookupListPage() {
     const [active, setActive] = useState(true);
 
     const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
+
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState(null);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -31,12 +35,30 @@ export default function LookupListPage() {
         setErr("");
         try {
             const res = await api.get("/api/lookups", {
-                params: { type },
+                params: { type, page },
                 headers: { Accept: "application/json" },
             });
-            setItems(res.data ?? []);
+
+            // ✅ ondersteunt beide shapes:
+            // - non-paginated: res.data is array
+            // - paginated: res.data is object met data/meta/links
+            const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+            setItems(data);
+
+            const m = res.data?.meta ?? res.data;
+            if (m && typeof m === "object" && "current_page" in m) {
+                setMeta({
+                    current_page: Number(m.current_page ?? page),
+                    last_page: Number(m.last_page ?? 1),
+                    per_page: Number(m.per_page ?? 20),
+                    total: Number(m.total ?? data.length),
+                });
+            } else {
+                setMeta(null);
+            }
         } catch (e) {
-            setErr(`Laden mislukt (${e?.response?.status ?? "no status"})`);
+            console.error("LOOKUPS ERROR", e);
+            setErr(`Laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         } finally {
             setLoading(false);
         }
@@ -68,16 +90,22 @@ export default function LookupListPage() {
         } catch (e) {
             setGenderMeta(null);
             setGender("");
-            setErr(`Meta laden mislukt (${e?.response?.status ?? "no status"})`);
+            setErr(`Meta laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         }
     }
 
+    // Bij type change: reset naar pagina 1 + reload meta
     useEffect(() => {
-        // bij type change: herlaad lookups + (optioneel) meta
-        load();
+        setPage(1);
         loadMeta();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [type]);
+
+    // Laad telkens page of type verandert
+    useEffect(() => {
+        load();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, type]);
 
     async function addItem(e) {
         e.preventDefault();
@@ -105,9 +133,10 @@ export default function LookupListPage() {
                 setGender(genderMeta.values[0]);
             }
 
+            // Na toevoegen: blijf op huidige pagina en herlaad
             await load();
         } catch (e) {
-            setErr(e?.response?.data?.message ?? `Opslaan mislukt (${e?.response?.status ?? "no status"})`);
+            setErr(e?.response?.data?.message ?? `Opslaan mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         } finally {
             setSaving(false);
         }
@@ -127,7 +156,7 @@ export default function LookupListPage() {
             );
             await load();
         } catch (e) {
-            setErr(`Update mislukt (${e?.response?.status ?? "no status"})`);
+            setErr(`Update mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         }
     }
 
@@ -139,7 +168,7 @@ export default function LookupListPage() {
             await api.delete(`/api/lookups/${item.id}`, { headers: { Accept: "application/json" } });
             await load();
         } catch (e) {
-            setErr(`Verwijderen mislukt (${e?.response?.status ?? "no status"})`);
+            setErr(`Verwijderen mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         }
     }
 
@@ -153,10 +182,17 @@ export default function LookupListPage() {
 
     return (
         <AppLayout
-            title={meta.title}
-            subtitle={meta.subtitle}
+            title={pageMeta.title}
+            subtitle={pageMeta.subtitle}
             actions={
-                <Button variant="primary" onClick={() => { load(); if (type === "weight_categories") loadMeta(); }} disabled={loading}>
+                <Button
+                    variant="primary"
+                    onClick={() => {
+                        load();
+                        if (type === "weight_categories") loadMeta();
+                    }}
+                    disabled={loading}
+                >
                     Refresh
                 </Button>
             }
@@ -229,43 +265,48 @@ export default function LookupListPage() {
                     <div className="text-slate-600 text-sm mt-1">Voeg hierboven je eerste waarde toe.</div>
                 </div>
             ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="text-left text-slate-600 border-b">
-                                <th className="py-3 pr-4">Waarde</th>
-                                {type === "weight_categories" && <th className="py-3 pr-4">Geslacht</th>}
-                                <th className="py-3 pr-4">Volgorde</th>
-                                <th className="py-3 pr-4">Status</th>
-                                <th className="py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map((it) => (
-                                <tr key={it.id} className="border-b last:border-b-0 hover:bg-slate-50">
-                                    <td className="py-3 pr-4 font-medium text-slate-900">{it.label}</td>
-                                    {type === "weight_categories" && (
-                                        <td className="py-3 pr-4 text-slate-700">{genderLabel(it.gender)}</td>
-                                    )}
-                                    <td className="py-3 pr-4 text-slate-700">{it.sort_order}</td>
-                                    <td className="py-3 pr-4">
-                                        <Badge tone={it.active ? "ok" : "neutral"}>{it.active ? "Actief" : "Inactief"}</Badge>
-                                    </td>
-                                    <td className="py-3 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="secondary" type="button" onClick={() => toggleActive(it)}>
-                                                {it.active ? "Deactiveer" : "Activeer"}
-                                            </Button>
-                                            <Button variant="danger" type="button" onClick={() => remove(it)}>
-                                                Verwijder
-                                            </Button>
-                                        </div>
-                                    </td>
+                <>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-left text-slate-600 border-b">
+                                    <th className="py-3 pr-4">Waarde</th>
+                                    {type === "weight_categories" && <th className="py-3 pr-4">Geslacht</th>}
+                                    <th className="py-3 pr-4">Volgorde</th>
+                                    <th className="py-3 pr-4">Status</th>
+                                    <th className="py-3"></th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {rows.map((it) => (
+                                    <tr key={it.id} className="border-b last:border-b-0 hover:bg-slate-50">
+                                        <td className="py-3 pr-4 font-medium text-slate-900">{it.label}</td>
+                                        {type === "weight_categories" && (
+                                            <td className="py-3 pr-4 text-slate-700">{genderLabel(it.gender)}</td>
+                                        )}
+                                        <td className="py-3 pr-4 text-slate-700">{it.sort_order}</td>
+                                        <td className="py-3 pr-4">
+                                            <Badge tone={it.active ? "ok" : "neutral"}>{it.active ? "Actief" : "Inactief"}</Badge>
+                                        </td>
+                                        <td className="py-3 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Button variant="secondary" type="button" onClick={() => toggleActive(it)}>
+                                                    {it.active ? "Deactiveer" : "Activeer"}
+                                                </Button>
+                                                <Button variant="danger" type="button" onClick={() => remove(it)}>
+                                                    Verwijder
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* ✅ pagination onderaan (alleen als meta bestaat) */}
+                    {meta && <Pagination meta={meta} onPage={setPage} />}
+                </>
             )}
         </AppLayout>
     );
