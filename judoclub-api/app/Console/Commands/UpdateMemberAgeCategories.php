@@ -30,9 +30,9 @@ class UpdateMemberAgeCategories extends Command
     {
         $dryRun = $this->option('dry-run');
         $year = (int) ($this->option('year') ?? date('Y'));
-        
+
         $this->info("=== Age Category Update voor jaar {$year} ===");
-        
+
         if ($dryRun) {
             $this->warn('DRY RUN MODE - Er worden geen wijzigingen opgeslagen');
         }
@@ -82,7 +82,7 @@ class UpdateMemberAgeCategories extends Command
 
             try {
                 $result = $this->updateMemberAgeCategory($member, $ageCategories, $year, $dryRun);
-                
+
                 if ($result === 'updated') {
                     $updates++;
                 } elseif ($result === 'no-change') {
@@ -126,7 +126,7 @@ class UpdateMemberAgeCategories extends Command
         // Zoek de juiste leeftijdscategorie
         // De categorie met de hoogste min_age die nog steeds <= ageInYear is
         $targetCategory = null;
-        
+
         foreach ($ageCategories as $category) {
             if ($category->min_age <= $ageInYear) {
                 $targetCategory = $category;
@@ -154,7 +154,7 @@ class UpdateMemberAgeCategories extends Command
         $this->line(sprintf(
             '%s %s (geboren %s, wordt %d in %d): %s → %s',
             $member->first_name,
-            $member->last_name, 
+            $member->last_name,
             $birthdate->format('d/m/Y'),
             $ageInYear,
             $year,

@@ -58,7 +58,7 @@ export function Alert({ variant = "error", children }) {
         info: "bg-blue-50 border-blue-200 text-blue-700",
         warning: "bg-amber-50 border-amber-200 text-amber-700"
     };
-    
+
     const styles = variants[variant] || variants.error;
     return <div className={`rounded-xl border px-4 py-3 text-sm ${styles}`}>{children}</div>;
 }

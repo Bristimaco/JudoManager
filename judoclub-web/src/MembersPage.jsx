@@ -144,8 +144,8 @@ export default function MembersPage() {
                     <Button variant="primary" onClick={onRefresh} disabled={loading}>
                         {loading ? "Laden..." : "Refresh"}
                     </Button>
-                    <Button 
-                        variant="danger" 
+                    <Button
+                        variant="danger"
                         onClick={() => {
                             const ok = window.confirm(
                                 "Weet je zeker dat je alle leeftijdscategorieën wilt bijwerken? Dit kan niet ongedaan worden gemaakt."
@@ -214,7 +214,7 @@ export default function MembersPage() {
                         {updateResults.summary.map((line, i) => (
                             <div key={i} className="text-sm">{line}</div>
                         ))}
-                        
+
                         {updateResults.changes.length > 0 && (
                             <details className="mt-3">
                                 <summary className="cursor-pointer text-sm font-medium">
@@ -234,8 +234,8 @@ export default function MembersPage() {
                                 </div>
                             </details>
                         )}
-                        
-                        <button 
+
+                        <button
                             onClick={() => setUpdateResults(null)}
                             className="mt-3 text-slate-600 hover:text-slate-900 text-sm underline"
                         >

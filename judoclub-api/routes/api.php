@@ -34,7 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('members', MemberController::class);
     Route::apiResource('lookups', LookupController::class)->except(['show']);
-    
+
     // Age category bulk update
     Route::post('/members/update-age-categories', function (Request $request) {
         $request->validate([
