@@ -17,6 +17,25 @@ export default function MembersPage() {
     const [page, setPage] = useState(1);
     const [meta, setMeta] = useState(null);
 
+    // Gender metadata voor labels
+    const [genderMeta, setGenderMeta] = useState(null);
+
+    // Helper functie voor gender labels
+    const genderLabel = (v) => genderMeta?.labels?.[v] ?? v;
+
+    // Load gender metadata
+    async function loadGenderMeta() {
+        try {
+            const res = await api.get("/api/meta", {
+                headers: { Accept: "application/json" },
+            });
+            setGenderMeta(res?.data?.genders ?? null);
+        } catch (e) {
+            console.error("Failed to load gender meta", e);
+            setGenderMeta(null);
+        }
+    }
+
     async function load() {
         setLoading(true);
         setErr("");
@@ -60,6 +79,11 @@ export default function MembersPage() {
         load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, q, statusFilter]);
+
+    // Load gender metadata eenmalig
+    useEffect(() => {
+        loadGenderMeta();
+    }, []);
 
     function onSearch() {
         // Reset naar pagina 1 en trigger load via useEffect
@@ -181,7 +205,7 @@ export default function MembersPage() {
                                                 {m.last_name} {m.first_name}
                                             </Link>
                                         </td>
-                                        <td className="py-3 pr-4 text-slate-700">{m.gender ?? "-"}</td>
+                                        <td className="py-3 pr-4 text-slate-700">{genderLabel(m.gender)}</td>
                                         <td className="py-3 pr-4 text-slate-700">{formatDateBE(m.birthdate)}</td>
                                         <td className="py-3 pr-4 text-slate-700">{m.belt ?? "-"}</td>
                                         <td className="py-3 pr-4 text-slate-700">{m.age_category ?? "-"}</td>
