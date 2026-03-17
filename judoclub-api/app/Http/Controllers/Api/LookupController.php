@@ -48,6 +48,7 @@ class LookupController extends Controller
 
             'label' => ['required', 'string', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'min_age' => ['nullable', 'integer', 'min:0', 'max:100'],
             'active' => ['sometimes', 'boolean'],
         ]);
 
@@ -56,6 +57,11 @@ class LookupController extends Controller
         // Forceer gender = null behalve voor weight_categories
         if ($data['type'] !== 'weight_categories') {
             $data['gender'] = null;
+        }
+
+        // Forceer min_age = null behalve voor age_categories  
+        if ($data['type'] !== 'age_categories') {
+            $data['min_age'] = null;
         }
 
         // Unique per type + gender(NULL-safe) + label
@@ -89,6 +95,7 @@ class LookupController extends Controller
             ],
             'label' => ['required', 'string', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'min_age' => ['nullable', 'integer', 'min:0', 'max:100'],
             'active' => ['sometimes', 'boolean'],
         ]);
 
@@ -97,6 +104,11 @@ class LookupController extends Controller
         // Forceer gender = null behalve voor weight_categories
         if ($lookup->type !== 'weight_categories') {
             $data['gender'] = null;
+        }
+
+        // Forceer min_age = null behalve voor age_categories
+        if ($lookup->type !== 'age_categories') {
+            $data['min_age'] = null;
         }
 
         // Unique per type + gender + label (excluding current)

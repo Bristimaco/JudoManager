@@ -19,6 +19,7 @@ export default function LookupListPage() {
     const [label, setLabel] = useState("");
     const [gender, setGender] = useState(""); // geen default hardcoded
     const [sortOrder, setSortOrder] = useState("0");
+    const [minAge, setMinAge] = useState(""); // voor age categories
     const [active, setActive] = useState(true);
 
     const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
@@ -29,6 +30,9 @@ export default function LookupListPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
+
+    // For inline editing
+    const [editingId, setEditingId] = useState(null);
 
     async function load() {
         setLoading(true);
@@ -117,6 +121,7 @@ export default function LookupListPage() {
                 {
                     type,
                     ...(type === "weight_categories" ? { gender } : {}),
+                    ...(type === "age_categories" && minAge ? { min_age: Number(minAge) } : {}),
                     label,
                     sort_order: Number(sortOrder || 0),
                     active,
@@ -126,6 +131,7 @@ export default function LookupListPage() {
 
             setLabel("");
             setSortOrder("0");
+            setMinAge("");
             setActive(true);
 
             // reset gender terug naar eerste enum waarde (als weight)
@@ -149,11 +155,32 @@ export default function LookupListPage() {
                 {
                     label: item.label,
                     sort_order: item.sort_order,
+                    ...(item.min_age !== undefined && item.min_age !== null ? { min_age: item.min_age } : {}),
                     active: !item.active,
                     ...(type === "weight_categories" ? { gender: item.gender } : {}),
                 },
                 { headers: { Accept: "application/json" } }
             );
+            await load();
+        } catch (e) {
+            setErr(`Update mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
+        }
+    }
+
+    async function updateMinAge(item, newMinAge) {
+        try {
+            await api.put(
+                `/api/lookups/${item.id}`,
+                {
+                    label: item.label,
+                    sort_order: item.sort_order,
+                    min_age: newMinAge ? Number(newMinAge) : null,
+                    active: item.active,
+                    ...(type === "weight_categories" ? { gender: item.gender } : {}),
+                },
+                { headers: { Accept: "application/json" } }
+            );
+            setEditingId(null);
             await load();
         } catch (e) {
             setErr(`Update mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
@@ -203,8 +230,8 @@ export default function LookupListPage() {
                 </div>
             )}
 
-            <form onSubmit={addItem} className="grid sm:grid-cols-4 gap-3 items-end mb-6">
-                <div className="sm:col-span-2">
+            <form onSubmit={addItem} className="grid gap-3 items-end mb-6" style={{gridTemplateColumns: `repeat(${type === 'weight_categories' ? '5' : type === 'age_categories' ? '4' : '3'}, 1fr) auto`}}>
+                <div>
                     <label className="block text-sm font-medium text-slate-700">Waarde</label>
                     <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nieuwe waarde..." />
                 </div>
@@ -228,6 +255,20 @@ export default function LookupListPage() {
                                 ))
                             )}
                         </select>
+                    </div>
+                )}
+
+                {type === "age_categories" && (
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700">Min. Leeftijd</label>
+                        <Input 
+                            type="number" 
+                            value={minAge} 
+                            onChange={(e) => setMinAge(e.target.value)} 
+                            placeholder="0" 
+                            min="0" 
+                            max="100"
+                        />
                     </div>
                 )}
 
@@ -272,6 +313,7 @@ export default function LookupListPage() {
                                 <tr className="text-left text-slate-600 border-b">
                                     <th className="py-3 pr-4">Waarde</th>
                                     {type === "weight_categories" && <th className="py-3 pr-4">Geslacht</th>}
+                                    {type === "age_categories" && <th className="py-3 pr-4">Min. Leeftijd</th>}
                                     <th className="py-3 pr-4">Volgorde</th>
                                     <th className="py-3 pr-4">Status</th>
                                     <th className="py-3"></th>
@@ -283,6 +325,43 @@ export default function LookupListPage() {
                                         <td className="py-3 pr-4 font-medium text-slate-900">{it.label}</td>
                                         {type === "weight_categories" && (
                                             <td className="py-3 pr-4 text-slate-700">{genderLabel(it.gender)}</td>
+                                        )}
+                                        {type === "age_categories" && (
+                                            <td className="py-3 pr-4 text-slate-700">
+                                                {editingId === it.id ? (
+                                                    <input
+                                                        type="number"
+                                                        defaultValue={it.min_age ?? ""}
+                                                        min="0"
+                                                        max="100"
+                                                        className="w-16 px-2 py-1 text-sm border border-slate-300 rounded"
+                                                        autoFocus
+                                                        onBlur={(e) => {
+                                                            const newValue = e.target.value;
+                                                            if (newValue !== String(it.min_age ?? "")) {
+                                                                updateMinAge(it, newValue);
+                                                            } else {
+                                                                setEditingId(null);
+                                                            }
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter") {
+                                                                e.target.blur();
+                                                            } else if (e.key === "Escape") {
+                                                                setEditingId(null);
+                                                            }
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span 
+                                                        className="cursor-pointer hover:bg-slate-100 px-1 py-1 rounded"
+                                                        onClick={() => setEditingId(it.id)}
+                                                        title="Klik om te bewerken"
+                                                    >
+                                                        {it.min_age ?? "-"}
+                                                    </span>
+                                                )}
+                                            </td>
                                         )}
                                         <td className="py-3 pr-4 text-slate-700">{it.sort_order}</td>
                                         <td className="py-3 pr-4">
