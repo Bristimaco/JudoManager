@@ -10,12 +10,53 @@ export default function TournamentsPage() {
     const [q, setQ] = useState("");
     const [statusFilter, setStatusFilter] = useState("upcoming"); // 'upcoming', 'past', 'all'
     const [activeFilter, setActiveFilter] = useState("active"); // 'active', 'inactive', 'all'
+    const [selectedAgeCategories, setSelectedAgeCategories] = useState(new Set());
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
 
     const [page, setPage] = useState(1);
     const [meta, setMeta] = useState(null);
+
+    const [ageCategories, setAgeCategories] = useState([]);
+    const [ageLoading, setAgeLoading] = useState(true);
+
+    // Helper: ondersteunt zowel array response als paginator {data, meta, links}
+    function pluckData(res) {
+        if (!res) return [];
+        const d = res.data;
+        return Array.isArray(d) ? d : (d?.data ?? []);
+    }
+
+    async function loadAgeCategories() {
+        setAgeLoading(true);
+        try {
+            const res = await api.get("/api/lookups", {
+                params: { type: "age_categories", per_page: 200 },
+                headers: { Accept: "application/json" },
+            });
+
+            const data = pluckData(res);
+            setAgeCategories(data.filter((x) => x.active));
+        } catch (e) {
+            setAgeCategories([]);
+        } finally {
+            setAgeLoading(false);
+        }
+    }
+
+    function toggleAgeCategory(categoryId) {
+        setSelectedAgeCategories((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(categoryId)) {
+                newSet.delete(categoryId);
+            } else {
+                newSet.add(categoryId);
+            }
+            return newSet;
+        });
+        setPage(1); // Reset naar eerste pagina bij filter wijziging
+    }
 
     async function load() {
         setLoading(true);
@@ -28,6 +69,9 @@ export default function TournamentsPage() {
             if (statusFilter === "past") params.status = "past";
             if (activeFilter === "active") params.active = "true";
             if (activeFilter === "inactive") params.active = "false";
+            if (selectedAgeCategories.size > 0) {
+                params.age_category_ids = Array.from(selectedAgeCategories).join(',');
+            }
 
             const res = await api.get("/api/tournaments", {
                 params,
@@ -50,9 +94,13 @@ export default function TournamentsPage() {
 
     // Load when page, search term or filters change
     useEffect(() => {
+        loadAgeCategories();
+    }, []);
+
+    useEffect(() => {
         load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, q, statusFilter, activeFilter]);
+    }, [page, q, statusFilter, activeFilter, selectedAgeCategories]);
 
     // Reset to page 1 when filters change
     useEffect(() => {
@@ -139,11 +187,38 @@ export default function TournamentsPage() {
                             setQ("");
                             setStatusFilter("upcoming");
                             setActiveFilter("active");
+                            setSelectedAgeCategories(new Set());
                         }}
                         className="w-full"
                     >
                         Reset filters
                     </Button>
+                </div>
+            </div>
+
+            {/* Leeftijdscategorieën Filter */}
+            <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-3">
+                    Leeftijdscategorieën {selectedAgeCategories.size > 0 && `(${selectedAgeCategories.size} geselecteerd)`}
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    {ageLoading ? (
+                        <div className="col-span-full text-sm text-slate-500">Categorieën laden...</div>
+                    ) : ageCategories.length === 0 ? (
+                        <div className="col-span-full text-sm text-slate-500">Geen categorieën beschikbaar</div>
+                    ) : (
+                        ageCategories.map((cat) => (
+                            <label key={cat.id} className="flex items-center gap-2 select-none cursor-pointer hover:bg-slate-100 p-2 rounded text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedAgeCategories.has(cat.id)}
+                                    onChange={() => toggleAgeCategory(cat.id)}
+                                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                                />
+                                <span className="text-sm text-slate-700">{cat.label}</span>
+                            </label>
+                        ))
+                    )}
                 </div>
             </div>
 
@@ -193,7 +268,7 @@ export default function TournamentsPage() {
                                         <td className="py-3 pr-4 text-slate-700">{formatDateBE(tournament.date)}</td>
                                         <td className="py-3 pr-4 text-slate-700">
                                             {tournament.age_categories && tournament.age_categories.length > 0 ? (
-                                                <div className="flex flex-wrap gap-1">
+                                                <div className="grid grid-cols-3 gap-1 max-w-60">
                                                     {tournament.age_categories.map((cat) => (
                                                         <Badge key={cat.id} tone="info" size="sm">
                                                             {cat.label}

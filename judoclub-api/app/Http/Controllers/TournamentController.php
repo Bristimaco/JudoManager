@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Tournament;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class TournamentController extends Controller
 {
@@ -35,6 +36,19 @@ class TournamentController extends Controller
             $query->where('name', 'like', '%' . $request->q . '%');
         }
 
+        // Filter op leeftijdscategorieën
+        if ($request->filled('age_category_ids')) {
+            $categoryIds = explode(',', $request->age_category_ids);
+            $categoryIds = array_map('trim', $categoryIds);
+            $categoryIds = array_filter($categoryIds, 'is_numeric');
+            
+            if (!empty($categoryIds)) {
+                $query->whereHas('ageCategories', function ($q) use ($categoryIds) {
+                    $q->whereIn('lookups.id', $categoryIds);
+                });
+            }
+        }
+
         // Sorteer op datum (nieuwste eerst)
         $query->orderBy('date', 'desc');
 
@@ -55,6 +69,7 @@ class TournamentController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'address' => 'required|string',
+            'flyer' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // max 5MB
             'date' => 'required|date|after_or_equal:today',
             'age_category_ids' => 'required|array|min:1',
             'age_category_ids.*' => 'required|exists:lookups,id',
@@ -62,8 +77,17 @@ class TournamentController extends Controller
             'active' => 'boolean',
         ]);
 
-        // Maak tournament zonder age_category_ids
-        $tournamentData = collect($validated)->except('age_category_ids')->toArray();
+        // Handle flyer upload
+        $flyerPath = null;
+        if ($request->hasFile('flyer')) {
+            $flyerPath = $request->file('flyer')->store('tournament-flyers', 'public');
+        }
+
+        // Maak tournament zonder age_category_ids en flyer file
+        $tournamentData = collect($validated)->except(['age_category_ids', 'flyer'])->toArray();
+        if ($flyerPath) {
+            $tournamentData['flyer'] = $flyerPath;
+        }
         $tournament = Tournament::create($tournamentData);
 
         // Koppel de age categories via pivot table
@@ -92,6 +116,7 @@ class TournamentController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'address' => 'required|string',
+            'flyer' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // max 5MB
             'date' => 'required|date',
             'age_category_ids' => 'required|array|min:1',
             'age_category_ids.*' => 'required|exists:lookups,id',
@@ -99,8 +124,19 @@ class TournamentController extends Controller
             'active' => 'boolean',
         ]);
 
-        // Update tournament zonder age_category_ids
-        $tournamentData = collect($validated)->except('age_category_ids')->toArray();
+        // Handle flyer upload
+        $flyerPath = $tournament->flyer; // behoud huidige flyer
+        if ($request->hasFile('flyer')) {
+            // Verwijder oude flyer als er een nieuwe wordt geüpload
+            if ($tournament->flyer && \Storage::disk('public')->exists($tournament->flyer)) {
+                \Storage::disk('public')->delete($tournament->flyer);
+            }
+            $flyerPath = $request->file('flyer')->store('tournament-flyers', 'public');
+        }
+
+        // Update tournament zonder age_category_ids en flyer file
+        $tournamentData = collect($validated)->except(['age_category_ids', 'flyer'])->toArray();
+        $tournamentData['flyer'] = $flyerPath;
         $tournament->update($tournamentData);
 
         // Sync de age categories via pivot table
@@ -117,6 +153,11 @@ class TournamentController extends Controller
      */
     public function destroy(Tournament $tournament)
     {
+        // Verwijder de flyer file als deze bestaat
+        if ($tournament->flyer && Storage::disk('public')->exists($tournament->flyer)) {
+            Storage::disk('public')->delete($tournament->flyer);
+        }
+
         $tournament->delete();
 
         return response()->json(['message' => 'Tournament deleted successfully']);

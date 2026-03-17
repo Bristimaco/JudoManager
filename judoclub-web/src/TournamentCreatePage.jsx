@@ -5,6 +5,85 @@ import AppLayout from "./components/AppLayout";
 import { Alert, Button, Input } from "./components/ui";
 import DatePickerInput from "./components/DatePickerInput";
 
+// Simple Map component using OpenStreetMap
+function AddressMap({ address }) {
+    const [mapUrl, setMapUrl] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        if (!address) {
+            setLoading(false);
+            return;
+        }
+
+        // Use OpenStreetMap Nominatim for geocoding (free, no API key needed)
+        const geocodeAddress = async () => {
+            try {
+                const encodedAddress = encodeURIComponent(address);
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`
+                );
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    const { lat, lon } = data[0];
+                    // Create OpenStreetMap embed URL
+                    const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.01},${lat-0.01},${parseFloat(lon)+0.01},${parseFloat(lat)+0.01}&layer=mapnik&marker=${lat},${lon}`;
+                    setMapUrl(osmUrl);
+                } else {
+                    setError("Adres niet gevonden op kaart");
+                }
+            } catch (err) {
+                setError("Kon kaart niet laden");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        geocodeAddress();
+    }, [address]);
+
+    if (!address) {
+        return (
+            <div className="h-64 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 text-sm">
+                Voer een adres in om de kaart te bekijken
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="h-64 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 text-sm animate-pulse">
+                Kaart laden...
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="h-64 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 text-sm">
+                {error}
+            </div>
+        );
+    }
+
+    return (
+        <div className="h-64 rounded-xl overflow-hidden border border-slate-200">
+            <iframe
+                src={mapUrl}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen=""
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title={`Kaart van ${address}`}
+            />
+        </div>
+    );
+}
+
 export default function TournamentCreatePage() {
     const nav = useNavigate();
 
@@ -12,6 +91,7 @@ export default function TournamentCreatePage() {
     const [address, setAddress] = useState("");
     const [date, setDate] = useState(""); // ISO yyyy-mm-dd
     const [selectedAgeCategories, setSelectedAgeCategories] = useState(new Set());
+    const [flyer, setFlyer] = useState(null);
     const [description, setDescription] = useState("");
     const [active, setActive] = useState(true);
 
@@ -76,17 +156,29 @@ export default function TournamentCreatePage() {
         setFieldErrors({});
 
         try {
+            // Use FormData for file upload
+            const formData = new FormData();
+            formData.append('name', name.trim());
+            formData.append('address', address.trim());
+            formData.append('date', date || '');
+            Array.from(selectedAgeCategories).forEach((id, index) => {
+                formData.append(`age_category_ids[${index}]`, id);
+            });
+            if (flyer) {
+                formData.append('flyer', flyer);
+            }
+            formData.append('description', description.trim() || '');
+            formData.append('active', active ? '1' : '0');
+
             await api.post(
                 "/api/tournaments",
-                {
-                    name: name.trim(),
-                    address: address.trim(),
-                    date: date || null,
-                    age_category_ids: Array.from(selectedAgeCategories),
-                    description: description.trim() || null,
-                    active,
-                },
-                { headers: { Accept: "application/json" } }
+                formData,
+                { 
+                    headers: { 
+                        Accept: "application/json",
+                        'Content-Type': 'multipart/form-data'
+                    } 
+                }
             );
 
             nav("/tournaments");
@@ -123,7 +215,10 @@ export default function TournamentCreatePage() {
                 </div>
             )}
 
-            <form onSubmit={onSubmit} className="grid gap-4">
+            <div className="grid lg:grid-cols-3 gap-6">
+                {/* Formulier - 2 kolommen */}
+                <div className="lg:col-span-2">
+                    <form onSubmit={onSubmit} className="grid gap-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-slate-700">Toernooi Naam *</label>
@@ -159,6 +254,20 @@ export default function TournamentCreatePage() {
                         Geef het volledige adres op voor kaartfunctionaliteit
                     </div>
                     {fe("address")}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700">Flyer (optioneel)</label>
+                    <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => setFlyer(e.target.files[0] || null)}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300"
+                    />
+                    <div className="mt-1 text-xs text-slate-500">
+                        Upload een flyer (PDF, JPG, PNG - max 5MB)
+                    </div>
+                    {fe("flyer")}
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -226,6 +335,51 @@ export default function TournamentCreatePage() {
                     </Link>
                 </div>
             </form>
+                </div>
+
+                {/* Preview Sidebar - 1 kolom */}
+                <div className="lg:col-span-1">
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="text-sm font-medium text-slate-700 mb-2">Locatie Preview</h3>
+                            <AddressMap address={address} />
+                        </div>
+
+                        {address && (
+                            <div className="bg-slate-50 rounded-xl p-4">
+                                <div className="text-sm font-medium text-slate-700 mb-2">Adres</div>
+                                <div className="text-sm text-slate-600">{address}</div>
+                            </div>
+                        )}
+
+                        {flyer && (
+                            <div className="bg-slate-50 rounded-xl p-4">
+                                <div className="text-sm font-medium text-slate-700 mb-2">Flyer Preview</div>
+                                <div className="space-y-2">
+                                    {flyer.type === 'application/pdf' ? (
+                                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                                            <span>📄</span>
+                                            <span>{flyer.name}</span>
+                                            <span className="text-xs">({(flyer.size / 1024 / 1024).toFixed(1)} MB)</span>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <img 
+                                                src={URL.createObjectURL(flyer)}
+                                                alt="Flyer preview"
+                                                className="w-full rounded-lg border border-slate-200 max-h-48 object-cover"
+                                            />
+                                            <div className="text-xs text-slate-500 mt-1">
+                                                {flyer.name} ({(flyer.size / 1024 / 1024).toFixed(1)} MB)
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </AppLayout>
     );
 }

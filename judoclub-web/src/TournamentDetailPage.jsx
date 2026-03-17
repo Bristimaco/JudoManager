@@ -100,6 +100,8 @@ export default function TournamentDetailPage() {
     const [address, setAddress] = useState("");
     const [date, setDate] = useState(""); // ISO yyyy-mm-dd
     const [selectedAgeCategories, setSelectedAgeCategories] = useState(new Set());
+    const [flyer, setFlyer] = useState(null);
+    const [currentFlyerPath, setCurrentFlyerPath] = useState("");
     const [description, setDescription] = useState("");
     const [active, setActive] = useState(true);
 
@@ -158,6 +160,7 @@ export default function TournamentDetailPage() {
                 (tournament.age_categories || []).map(cat => cat.id)
             );
             setSelectedAgeCategories(categoryIds);
+            setCurrentFlyerPath(tournament.flyer ?? "");
             setDescription(tournament.description ?? "");
             setActive(!!tournament.active);
         } catch (e) {
@@ -186,17 +189,29 @@ export default function TournamentDetailPage() {
         setFieldErrors({});
 
         try {
+            // Use FormData for file upload
+            const formData = new FormData();
+            formData.append('name', name.trim());
+            formData.append('address', address.trim());
+            formData.append('date', date || '');
+            Array.from(selectedAgeCategories).forEach((id, index) => {
+                formData.append(`age_category_ids[${index}]`, id);
+            });
+            if (flyer) {
+                formData.append('flyer', flyer);
+            }
+            formData.append('description', description.trim() || '');
+            formData.append('active', active ? '1' : '0');
+
             await api.put(
                 `/api/tournaments/${id}`,
-                {
-                    name: name.trim(),
-                    address: address.trim(),
-                    date: date || null,
-                    age_category_ids: Array.from(selectedAgeCategories),
-                    description: description.trim() || null,
-                    active,
-                },
-                { headers: { Accept: "application/json" } }
+                formData,
+                { 
+                    headers: { 
+                        Accept: "application/json",
+                        'Content-Type': 'multipart/form-data'
+                    } 
+                }
             );
 
             await load();
@@ -303,6 +318,33 @@ export default function TournamentDetailPage() {
                             {fe("address")}
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">Flyer</label>
+                            {currentFlyerPath && (
+                                <div className="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                    <div className="text-sm font-medium text-slate-700 mb-2">Huidige flyer:</div>
+                                    <a 
+                                        href={`http://localhost:8000/storage/${currentFlyerPath}`}
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-700 underline text-sm"
+                                    >
+                                        {currentFlyerPath.split('/').pop()}
+                                    </a>
+                                </div>
+                            )}
+                            <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(e) => setFlyer(e.target.files[0] || null)}
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300"
+                            />
+                            <div className="mt-1 text-xs text-slate-500">
+                                Upload een nieuwe flyer (PDF, JPG, PNG - max 5MB) of behoud huidige
+                            </div>
+                            {fe("flyer")}
+                        </div>
+
                         <div className="grid sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-3">Leeftijdscategorieën *</label>
@@ -396,6 +438,38 @@ export default function TournamentDetailPage() {
                                     >
                                         Open in Google Maps →
                                     </a>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentFlyerPath && (
+                            <div className="bg-slate-50 rounded-xl p-4">
+                                <div className="text-sm font-medium text-slate-700 mb-2">Flyer</div>
+                                <div className="space-y-2">
+                                    {currentFlyerPath.toLowerCase().endsWith('.pdf') ? (
+                                        <div>
+                                            <a 
+                                                href={`http://localhost:8000/storage/${currentFlyerPath}`}
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                            >
+                                                📄 PDF bekijken →
+                                            </a>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <img 
+                                                src={`http://localhost:8000/storage/${currentFlyerPath}`}
+                                                alt="Toernooi flyer"
+                                                className="w-full rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition"
+                                                onClick={() => window.open(`http://localhost:8000/storage/${currentFlyerPath}`, '_blank')}
+                                            />
+                                            <div className="text-xs text-slate-500 mt-1">
+                                                Klik op de afbeelding om te vergroten
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
