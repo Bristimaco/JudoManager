@@ -142,6 +142,7 @@ class TournamentController extends Controller
                 'id' => $member->id,
                 'first_name' => $member->first_name,
                 'last_name' => $member->last_name,
+                'gender' => $member->gender,
                 'email' => $member->email,
                 'license_number' => $member->license_number,
                 'weight_category' => $member->weight_category,

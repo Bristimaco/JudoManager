@@ -947,7 +947,26 @@ export default function TournamentDetailPage() {
                     )}
 
                     {membersLoaded && (() => {
-                        const acceptedParticipants = eligibleMembers.filter(m => m.response_status === 'accepted');
+                        // Build age category order map from the loaded lookup list
+                        const ageCategoryOrder = {};
+                        ageCategories.forEach((cat, idx) => { ageCategoryOrder[cat.label] = idx; });
+
+                        const parseWeight = (w) => {
+                            if (!w) return Infinity;
+                            const n = parseFloat(w.replace(/[+\-\s]/g, '').split('-')[0]);
+                            return isNaN(n) ? Infinity : n;
+                        };
+
+                        const sortParticipants = (list) => [...list].sort((a, b) => {
+                            const ageDiff = (ageCategoryOrder[a.calculated_age_category] ?? 999) -
+                                (ageCategoryOrder[b.calculated_age_category] ?? 999);
+                            if (ageDiff !== 0) return ageDiff;
+                            return parseWeight(a.weight_category) - parseWeight(b.weight_category);
+                        });
+
+                        const acceptedParticipants = sortParticipants(
+                            eligibleMembers.filter(m => m.response_status === 'accepted')
+                        );
                         const nonAcceptedParticipants = eligibleMembers.filter(m => m.response_status !== 'accepted');
 
                         const renderMemberRow = (member) => (
@@ -970,6 +989,9 @@ export default function TournamentDetailPage() {
                                             </svg>
                                         </a>
                                     </span>
+                                </td>
+                                <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                    {member.gender === 'M' ? 'Man' : member.gender === 'V' ? 'Vrouw' : '-'}
                                 </td>
                                 <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
                                     {member.calculated_age_category}
@@ -1066,6 +1088,7 @@ export default function TournamentDetailPage() {
                                         <tr>
                                             <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Licentie</th>
                                             <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Naam</th>
+                                            <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Geslacht</th>
                                             <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Leeftijdscategorie</th>
                                             <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Gewichtsklasse</th>
                                             <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Email</th>
