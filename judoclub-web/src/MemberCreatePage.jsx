@@ -36,6 +36,13 @@ export default function MemberCreatePage() {
   const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
   const [genderMetaLoading, setGenderMetaLoading] = useState(true);
 
+  // ✅ helper: ondersteunt zowel array response als paginator {data, meta, links}
+  function pluckData(res) {
+    if (!res) return [];
+    const d = res.data;
+    return Array.isArray(d) ? d : (d?.data ?? []);
+  }
+
   useEffect(() => {
     loadMeta();
     loadBelts();
@@ -55,6 +62,9 @@ export default function MemberCreatePage() {
     try {
       const res = await api.get("/api/meta", { headers: { Accept: "application/json" } });
       setGenderMeta(res?.data?.genders ?? null);
+    } catch (e) {
+      console.error("Meta load error:", e);
+      setGenderMeta(null);
     } finally {
       setGenderMetaLoading(false);
     }
@@ -70,10 +80,14 @@ export default function MemberCreatePage() {
     setWeightLoading(true);
     try {
       const res = await api.get("/api/lookups", {
-        params: { type: "weight_categories", gender: currentGender },
+        params: { type: "weight_categories", gender: currentGender, per_page: 200, page: 1 },
         headers: { Accept: "application/json" },
       });
-      setWeightCategories((res.data ?? []).filter((x) => x.active));
+      const data = pluckData(res);
+      setWeightCategories(data.filter((x) => x.active));
+    } catch (e) {
+      console.error("Weight categories load error:", e);
+      setWeightCategories([]);
     } finally {
       setWeightLoading(false);
     }
@@ -83,10 +97,14 @@ export default function MemberCreatePage() {
     setAgeLoading(true);
     try {
       const res = await api.get("/api/lookups", {
-        params: { type: "age_categories" },
+        params: { type: "age_categories", per_page: 200, page: 1 },
         headers: { Accept: "application/json" },
       });
-      setAgeCategories((res.data ?? []).filter((x) => x.active));
+      const data = pluckData(res);
+      setAgeCategories(data.filter((x) => x.active));
+    } catch (e) {
+      console.error("Age categories load error:", e);
+      setAgeCategories([]);
     } finally {
       setAgeLoading(false);
     }
@@ -96,10 +114,14 @@ export default function MemberCreatePage() {
     setBeltsLoading(true);
     try {
       const res = await api.get("/api/lookups", {
-        params: { type: "belts" },
+        params: { type: "belts", per_page: 200, page: 1 },
         headers: { Accept: "application/json" },
       });
-      setBelts((res.data ?? []).filter((x) => x.active));
+      const data = pluckData(res);
+      setBelts(data.filter((x) => x.active));
+    } catch (e) {
+      console.error("Belts load error:", e);
+      setBelts([]);
     } finally {
       setBeltsLoading(false);
     }

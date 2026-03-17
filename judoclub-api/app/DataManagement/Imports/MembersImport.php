@@ -112,8 +112,6 @@ class MembersImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
 
                 $id = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
 
-                $id = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
-
                 if ($id) {
                     $member = Member::find($id);
 

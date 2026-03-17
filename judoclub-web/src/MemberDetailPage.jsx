@@ -217,10 +217,42 @@ export default function MemberDetailPage() {
     setError("");
 
     try {
+      // Als het lid nog actief is (lokaal), eerst op inactief zetten
+      if (active) {
+        console.log("Lid is nog actief, zet eerst op inactief...");
+        await api.put(
+          `/api/members/${id}`,
+          {
+            license_number: licenseNumber,
+            first_name: firstName,
+            last_name: lastName,
+            birthdate: birthdate || null,
+            belt: belt || null,
+            active: false, // Zet op inactief
+            age_category: ageCategory || null,
+            gender: gender || null,
+            weight_category: gender ? weightCategory || null : null,
+          },
+          { headers: { Accept: "application/json" } }
+        );
+
+        // Update lokale state
+        setActive(false);
+      }
+
+      // Nu het lid verwijderen
       await api.delete(`/api/members/${id}`, { headers: { Accept: "application/json" } });
       nav("/members");
     } catch (e) {
-      setError(`Verwijderen mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
+      const status = e?.response?.status;
+      const data = e?.response?.data;
+
+      // Specifieke handling voor actieve leden (als het alsnog faalt)
+      if (status === 422 && data?.error === 'active_member_cannot_be_deleted') {
+        setError(data.message || "Dit lid is nog actief. Er is iets misgegaan bij het inactief maken.");
+      } else {
+        setError(`Verwijderen mislukt (${status ?? e?.message ?? "no status"})`);
+      }
       setDeleting(false);
     }
   }
@@ -368,7 +400,14 @@ export default function MemberDetailPage() {
             {saving ? "Opslaan..." : "Opslaan"}
           </Button>
 
-          <Button variant="danger" type="button" onClick={onDelete} disabled={deleting} className="sm:ml-auto">
+          <Button
+            variant="danger"
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            className="sm:ml-auto"
+            title="Verwijder dit lid"
+          >
             {deleting ? "Verwijderen..." : "Verwijder"}
           </Button>
         </div>

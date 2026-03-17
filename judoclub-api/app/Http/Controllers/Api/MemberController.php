@@ -29,14 +29,14 @@ class MemberController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'license_number' => ['required', 'integer', 'min:1', Rule::unique('members', 'license_number')],
+            'license_number' => ['required', 'numeric', 'min:1', Rule::unique('members', 'license_number')],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'birthdate' => ['nullable', 'date'],
             'belt' => ['nullable', 'string', 'max:50'],
             'active' => ['sometimes', 'boolean'],
             'age_category' => ['nullable', 'string', 'max:50'],
-            'weight_category' => ['nullable', 'string', 'max:50'],
+            'weight_category' => ['nullable', 'string', 'max:50', 'required_with:gender'],
             'gender' => ['nullable', Rule::in(Gender::options())],
         ]);
 
@@ -56,14 +56,14 @@ class MemberController extends Controller
     public function update(Request $request, Member $member)
     {
         $data = $request->validate([
-            'license_number' => ['required', 'integer', 'min:1', Rule::unique('members', 'license_number')->ignore($member->id)],
+            'license_number' => ['required', 'numeric', 'min:1', Rule::unique('members', 'license_number')->ignore($member->id)],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'birthdate' => ['nullable', 'date'],
             'belt' => ['nullable', 'string', 'max:50'],
             'active' => ['sometimes', 'boolean'],
             'age_category' => ['nullable', 'string', 'max:50'],
-            'weight_category' => ['nullable', 'string', 'max:50'],
+            'weight_category' => ['nullable', 'string', 'max:50', 'required_with:gender'],
             'gender' => ['nullable', Rule::in(Gender::options())], // ✅ FIX
         ]);
 
@@ -77,6 +77,17 @@ class MemberController extends Controller
 
     public function destroy(Member $member)
     {
+        // Controleer of het lid nog actief is
+        if ($member->active) {
+            return response()->json([
+                'message' => 'Actieve leden kunnen niet worden verwijderd. Zet het lid eerst op inactief.',
+                'error' => 'active_member_cannot_be_deleted',
+                'errors' => [
+                    'active' => ['Dit lid is nog actief. Zet het lid eerst op inactief voordat je het verwijdert.']
+                ]
+            ], 422);
+        }
+
         $member->delete();
 
         return response()->json(['deleted' => true]);

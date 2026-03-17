@@ -47,16 +47,20 @@ export default function MembersPage() {
         }
     }
 
-    // Laad (opnieuw) wanneer page verandert
+    // Load wanneer page of search term verandert
     useEffect(() => {
         load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page]);
+    }, [page, q]);
 
     function onSearch() {
-        // Nieuwe zoekopdracht => reset naar pagina 1.
-        // Load gebeurt via useEffect op page change.
-        setPage(1);
+        // Reset naar pagina 1 en trigger load via useEffect
+        if (page === 1) {
+            // Als we al op pagina 1 zijn, forceer reload
+            load();
+        } else {
+            setPage(1);
+        }
     }
 
     function onRefresh() {
