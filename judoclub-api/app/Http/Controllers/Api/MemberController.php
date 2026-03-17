@@ -13,6 +13,7 @@ class MemberController extends Controller
     public function index(Request $request)
     {
         $q = $request->query('q');
+        $activeFilter = $request->query('active'); // 'true', 'false', or null (all)
 
         return Member::query()
             ->when($q, function ($query) use ($q) {
@@ -20,6 +21,9 @@ class MemberController extends Controller
                     $sub->where('first_name', 'like', "%{$q}%")
                         ->orWhere('last_name', 'like', "%{$q}%");
                 });
+            })
+            ->when($activeFilter !== null, function ($query) use ($activeFilter) {
+                $query->where('active', $activeFilter === 'true');
             })
             ->orderBy('last_name')
             ->orderBy('first_name')

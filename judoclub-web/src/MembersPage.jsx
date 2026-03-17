@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { api } from "./api";
 import { Link } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
-import { Alert, Badge, Button, Input } from "./components/ui";
+import { Alert, Badge, Button, Input, Select } from "./components/ui";
 import { formatDateBE } from "./utils/date";
 import Pagination from "./components/Pagination";
 
 export default function MembersPage() {
     const [q, setQ] = useState("");
+    const [statusFilter, setStatusFilter] = useState("active"); // 'active', 'inactive', 'all'
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
@@ -21,8 +22,15 @@ export default function MembersPage() {
         setErr("");
 
         try {
+            // Bouw parameters op basis van filters
+            const params = { page };
+            if (q) params.q = q;
+            if (statusFilter === "active") params.active = "true";
+            if (statusFilter === "inactive") params.active = "false";
+            // Als statusFilter === "all", geen active parameter meesturen
+
             const res = await api.get("/api/members", {
-                params: { ...(q ? { q } : {}), page },
+                params,
                 headers: { Accept: "application/json" },
             });
 
@@ -47,11 +55,11 @@ export default function MembersPage() {
         }
     }
 
-    // Load wanneer page of search term verandert
+    // Load wanneer page, search term of status filter verandert
     useEffect(() => {
         load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, q]);
+    }, [page, q, statusFilter]);
 
     function onSearch() {
         // Reset naar pagina 1 en trigger load via useEffect
@@ -82,7 +90,7 @@ export default function MembersPage() {
                 </>
             }
         >
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="flex flex-col lg:flex-row gap-3 mb-4">
                 <div className="flex-1">
                     <Input
                         value={q}
@@ -92,6 +100,21 @@ export default function MembersPage() {
                             if (e.key === "Enter") onSearch();
                         }}
                     />
+                </div>
+
+                <div className="w-full sm:w-48">
+                    <Select
+                        value={statusFilter}
+                        onChange={(e) => {
+                            setStatusFilter(e.target.value);
+                            // Reset naar pagina 1 bij filterwijziging
+                            if (page !== 1) setPage(1);
+                        }}
+                    >
+                        <option value="active">Enkel actieve leden</option>
+                        <option value="inactive">Enkel inactieve leden</option>
+                        <option value="all">Alle leden</option>
+                    </Select>
                 </div>
 
                 <Button variant="primary" onClick={onSearch} disabled={loading}>
@@ -147,6 +170,9 @@ export default function MembersPage() {
                             <tbody>
                                 {items.map((m) => (
                                     <tr key={m.id} className="border-b last:border-b-0 hover:bg-slate-50">
+                                        <td className="py-3 pr-4 text-slate-700">
+                                            {m.license_number ?? "-"}
+                                        </td>
                                         <td className="py-3 pr-4">
                                             <Link
                                                 to={`/members/${m.id}`}
@@ -154,9 +180,6 @@ export default function MembersPage() {
                                             >
                                                 {m.last_name} {m.first_name}
                                             </Link>
-                                        </td>
-                                        <td className="py-3 pr-4 text-slate-700">
-                                            {m.license_number ?? "-"}
                                         </td>
                                         <td className="py-3 pr-4 text-slate-700">{m.gender ?? "-"}</td>
                                         <td className="py-3 pr-4 text-slate-700">{formatDateBE(m.birthdate)}</td>

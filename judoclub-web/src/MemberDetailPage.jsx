@@ -222,7 +222,7 @@ export default function MemberDetailPage() {
     } catch (e) {
       const status = e?.response?.status;
       const data = e?.response?.data;
-      
+
       // Specifieke handling voor actieve leden
       if (status === 422 && data?.error === 'active_member_cannot_be_deleted') {
         setError(data.message || "Dit lid is nog actief. Zet het lid eerst op inactief voordat je het verwijdert.");
