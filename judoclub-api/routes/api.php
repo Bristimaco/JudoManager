@@ -37,6 +37,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('lookups', LookupController::class)->except(['show']);
     Route::apiResource('tournaments', TournamentController::class);
 
+    // Tournament eligible members
+    Route::get('/tournaments/{tournament}/eligible-members', [TournamentController::class, 'eligibleMembers']);
+
     // Age category bulk update
     Route::post('/members/update-age-categories', function (Request $request) {
         $request->validate([

@@ -152,6 +152,90 @@ class TournamentController extends Controller
     }
 
     /**
+     * Get eligible members for a tournament based on age categories on tournament date.
+     */
+    public function eligibleMembers(Tournament $tournament)
+    {
+        $tournament->load('ageCategories');
+
+        if ($tournament->ageCategories->isEmpty()) {
+            return response()->json(['message' => 'Geen leeftijdscategorieën gekonfigureerd voor dit toernooi.'], 400);
+        }
+
+        $tournamentDate = Carbon::parse($tournament->date);
+        $tournamentYear = $tournamentDate->year;
+
+        // Haal alle actieve leden op die interesse hebben in competitie
+        $members = Member::where('active', true)
+            ->where('interested_in_competition', true)
+            ->get();
+
+        $eligibleMembers = [];
+
+        foreach ($members as $member) {
+            if (!$member->birthdate)
+                continue;
+
+            // Bereken leeftijd op 1 januari van het toernooi jaar (calendar year system)
+            $birthYear = Carbon::parse($member->birthdate)->year;
+            $ageOnTournamentYear = $tournamentYear - $birthYear;
+
+            // Bepaal in welke age category dit lid valt
+            $memberAgeCategory = $this->determineAgeCategory($ageOnTournamentYear);
+
+            if (!$memberAgeCategory)
+                continue;
+
+            // Check of de member's age category matcht met een van de tournament age categories
+            $isEligible = $tournament->ageCategories->contains('id', $memberAgeCategory->id);
+
+            if ($isEligible) {
+                $memberData = $member->toArray();
+                $memberData['age_on_tournament'] = $ageOnTournamentYear;
+                $memberData['calculated_age_category'] = $memberAgeCategory->label;
+                $eligibleMembers[] = $memberData;
+            }
+        }
+
+        // Sorteer op achternaam, dan voornaam
+        usort($eligibleMembers, function ($a, $b) {
+            $lastNameComparison = strcmp($a['last_name'], $b['last_name']);
+            if ($lastNameComparison === 0) {
+                return strcmp($a['first_name'], $b['first_name']);
+            }
+            return $lastNameComparison;
+        });
+
+        return response()->json([
+            'tournament' => $tournament,
+            'eligible_members' => $eligibleMembers,
+            'total_eligible' => count($eligibleMembers)
+        ]);
+    }
+
+    /**
+     * Bepaal age category op basis van leeftijd
+     */
+    private function determineAgeCategory($age)
+    {
+        $ageCategories = Lookup::where('type', 'age_categories')
+            ->where('active', true)
+            ->orderBy('min_age', 'asc')
+            ->get();
+
+        $matchingCategory = null;
+        foreach ($ageCategories as $category) {
+            if ($age >= $category->min_age) {
+                $matchingCategory = $category;
+            } else {
+                break;
+            }
+        }
+
+        return $matchingCategory;
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Tournament $tournament)

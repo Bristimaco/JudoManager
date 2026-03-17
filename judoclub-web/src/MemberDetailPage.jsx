@@ -24,6 +24,7 @@ export default function MemberDetailPage() {
   const [birthdate, setBirthdate] = useState(""); // ISO yyyy-mm-dd of ""
   const [belt, setBelt] = useState("");
   const [active, setActive] = useState(true);
+  const [interestedInCompetition, setInterestedInCompetition] = useState(true);
 
   const [belts, setBelts] = useState([]);
   const [beltsLoading, setBeltsLoading] = useState(true);
@@ -166,6 +167,7 @@ export default function MemberDetailPage() {
       setBirthdate(m.birthdate ? String(m.birthdate).split("T")[0] : "");
       setBelt(m.belt ?? "");
       setActive(!!m.active);
+      setInterestedInCompetition(!!m.interested_in_competition);
       setAgeCategory(m.age_category ?? "");
       setWeightCategory(m.weight_category ?? "");
 
@@ -218,6 +220,7 @@ export default function MemberDetailPage() {
           birthdate: birthdate || null,
           belt: belt || null,
           active,
+          interested_in_competition: interestedInCompetition,
           age_category: ageCategory || null,
           gender: gender || null,
           weight_category: gender ? weightCategory || null : null,
@@ -438,6 +441,18 @@ export default function MemberDetailPage() {
               className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
             />
             <span className="text-sm text-slate-700">Actief lid</span>
+          </label>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-3 select-none">
+            <input
+              type="checkbox"
+              checked={interestedInCompetition}
+              onChange={(e) => setInterestedInCompetition(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+            />
+            <span className="text-sm text-slate-700">Interesse in competitie</span>
           </label>
         </div>
 

@@ -108,6 +108,13 @@ export default function TournamentDetailPage() {
     const [ageCategories, setAgeCategories] = useState([]);
     const [ageLoading, setAgeLoading] = useState(true);
 
+    // Eligible members state
+    const [eligibleMembers, setEligibleMembers] = useState([]);
+    const [fetchingMembers, setFetchingMembers] = useState(false);
+    const [membersLoaded, setMembersLoaded] = useState(false);
+    const [membersError, setMembersError] = useState("");
+    const [expandedMembers, setExpandedMembers] = useState(false);
+
     // Helper: ondersteunt zowel array response als paginator {data, meta, links}
     function pluckData(res) {
         if (!res) return [];
@@ -125,6 +132,24 @@ export default function TournamentDetailPage() {
             }
             return newSet;
         });
+    }
+
+    async function fetchEligibleMembers() {
+        setFetchingMembers(true);
+        setMembersError("");
+
+        try {
+            const res = await api.get(`/api/tournaments/${id}/eligible-members`, {
+                headers: { Accept: "application/json" }
+            });
+
+            setEligibleMembers(res.data.eligible_members || []);
+            setMembersLoaded(true);
+        } catch (e) {
+            setMembersError(`Leden ophalen mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
+        } finally {
+            setFetchingMembers(false);
+        }
     }
 
     async function loadAgeCategories() {
@@ -284,7 +309,7 @@ export default function TournamentDetailPage() {
             )}
 
             <div className="grid lg:grid-cols-3 gap-6">
-                {/* Formulier - 2 kolommen */}
+                {/* Formulier + Zijbalk */}
                 <div className="lg:col-span-2">
                     <form onSubmit={onSave} className="grid gap-4">
                         <div className="grid sm:grid-cols-2 gap-4">
@@ -475,6 +500,112 @@ export default function TournamentDetailPage() {
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* Geschikte Leden - Full Width Collapsible */}
+            <div className="mt-6 border border-slate-200 rounded-xl bg-slate-50 overflow-hidden">
+                <button
+                    onClick={() => setExpandedMembers(!expandedMembers)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-100 transition"
+                >
+                    <h3 className="text-base font-medium text-slate-800">Geschikte Leden</h3>
+                    <svg
+                        className={`w-5 h-5 text-slate-600 transition-transform ${
+                            expandedMembers ? 'rotate-180' : ''
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                        />
+                    </svg>
+                </button>
+
+                {expandedMembers && (
+                    <div className="px-4 py-4 border-t border-slate-200">
+                        <div className="mb-4 flex items-center gap-2">
+                            <Button
+                                variant="blue"
+                                size="sm"
+                                onClick={fetchEligibleMembers}
+                                disabled={fetchingMembers}
+                            >
+                                {fetchingMembers ? "Ophalen..." : "Haal leden op"}
+                            </Button>
+                            {fetchingMembers && <span className="text-sm text-slate-600">Leden ophalen...</span>}
+                        </div>
+
+                        {membersError && (
+                            <div className="text-sm text-red-600 mb-3 p-3 bg-red-50 rounded-lg">
+                                {membersError}
+                            </div>
+                        )}
+
+                        {membersLoaded && (
+                            <div>
+                                <div className="text-sm text-slate-600 mb-3">
+                                    <strong>{eligibleMembers.length}</strong> leden komen in aanmerking voor deelname
+                                </div>
+
+                                {eligibleMembers.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border-collapse border border-slate-300">
+                                            <thead className="bg-slate-100">
+                                                <tr>
+                                                    <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
+                                                        Licentie
+                                                    </th>
+                                                    <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
+                                                        Naam
+                                                    </th>
+                                                    <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
+                                                        Leeftijdscategorie
+                                                    </th>
+                                                    <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
+                                                        Gewichtsklasse
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white">
+                                                {eligibleMembers.map((member) => (
+                                                    <tr key={member.id} className="hover:bg-slate-50 transition">
+                                                        <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800 font-medium">
+                                                            {member.license_number || '-'}
+                                                        </td>
+                                                        <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                                            {member.first_name} {member.last_name}
+                                                        </td>
+                                                        <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                                            {member.calculated_age_category}
+                                                        </td>
+                                                        <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                                            {member.weight_category || '-'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-slate-500 italic py-4 text-center">
+                                        Geen leden gevonden die voldoen aan de leeftijdscriteria
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {!membersLoaded && (
+                            <div className="text-sm text-slate-500 text-center py-4">
+                                Klik op "Haal leden op" om geschikte leden te zien
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </AppLayout>
     );

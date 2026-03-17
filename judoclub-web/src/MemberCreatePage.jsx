@@ -17,6 +17,7 @@ export default function MemberCreatePage() {
   const [belt, setBelt] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [active, setActive] = useState(true);
+  const [interestedInCompetition, setInterestedInCompetition] = useState(true);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -231,6 +232,7 @@ export default function MemberCreatePage() {
           birthdate: birthdate || null, // ✅ rechtstreeks uit datepicker
           belt: belt || null,
           active,
+          interested_in_competition: interestedInCompetition,
           age_category: ageCategory || null,
           gender: gender || null,
           weight_category: gender ? weightCategory || null : null,
@@ -418,6 +420,17 @@ export default function MemberCreatePage() {
                 className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
               />
               <span className="text-sm text-slate-700">Actief lid</span>
+            </label>
+          </div>
+          <div>
+            <label className="flex items-center gap-3 select-none">
+              <input
+                type="checkbox"
+                checked={interestedInCompetition}
+                onChange={(e) => setInterestedInCompetition(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+              />
+              <span className="text-sm text-slate-700">Interesse in competitie</span>
             </label>
           </div>
         </div>

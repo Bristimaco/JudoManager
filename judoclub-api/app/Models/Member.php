@@ -13,6 +13,7 @@ class Member extends Model
         'birthdate',
         'belt',
         'active',
+        'interested_in_competition',
         'age_category',
         'weight_category',
         'gender',
@@ -21,5 +22,6 @@ class Member extends Model
     protected $casts = [
         'birthdate' => 'date:Y-m-d',
         'active' => 'boolean',
+        'interested_in_competition' => 'boolean',
     ];
 }

@@ -39,6 +39,7 @@ class MemberController extends Controller
             'birthdate' => ['nullable', 'date'],
             'belt' => ['nullable', 'string', 'max:50'],
             'active' => ['sometimes', 'boolean'],
+            'interested_in_competition' => ['sometimes', 'boolean'],
             'age_category' => ['nullable', 'string', 'max:50'],
             'weight_category' => ['nullable', 'string', 'max:50', 'required_with:gender'],
             'gender' => ['nullable', Rule::in(Gender::options())],
@@ -66,6 +67,7 @@ class MemberController extends Controller
             'birthdate' => ['nullable', 'date'],
             'belt' => ['nullable', 'string', 'max:50'],
             'active' => ['sometimes', 'boolean'],
+            'interested_in_competition' => ['sometimes', 'boolean'],
             'age_category' => ['nullable', 'string', 'max:50'],
             'weight_category' => ['nullable', 'string', 'max:50', 'required_with:gender'],
             'gender' => ['nullable', Rule::in(Gender::options())], // ✅ FIX
