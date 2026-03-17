@@ -14,13 +14,13 @@ class TournamentController extends Controller
     public function index(Request $request)
     {
         $query = Tournament::query();
-        
+
         // Filter op actief/inactief
         if ($request->has('active')) {
             $active = $request->boolean('active');
             $query->where('active', $active);
         }
-        
+
         // Filter op status (komend/voorbij)
         if ($request->has('status')) {
             if ($request->status === 'upcoming') {
@@ -29,21 +29,21 @@ class TournamentController extends Controller
                 $query->past();
             }
         }
-        
+
         // Zoeken op naam
         if ($request->filled('q')) {
             $query->where('name', 'like', '%' . $request->q . '%');
         }
-        
+
         // Sorteer op datum (nieuwste eerst)
         $query->orderBy('date', 'desc');
-        
+
         // Eager load age categories
         $query->with('ageCategories');
-        
+
         // Paginatie
         $tournaments = $query->paginate($request->get('per_page', 15));
-        
+
         return response()->json($tournaments);
     }
 
@@ -61,17 +61,17 @@ class TournamentController extends Controller
             'description' => 'nullable|string',
             'active' => 'boolean',
         ]);
-        
+
         // Maak tournament zonder age_category_ids
         $tournamentData = collect($validated)->except('age_category_ids')->toArray();
         $tournament = Tournament::create($tournamentData);
-        
+
         // Koppel de age categories via pivot table
         $tournament->ageCategories()->attach($validated['age_category_ids']);
-        
+
         // Laad de age categories voor de response
         $tournament->load('ageCategories');
-        
+
         return response()->json($tournament, 201);
     }
 
@@ -91,24 +91,24 @@ class TournamentController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'address' => 'required|string', 
+            'address' => 'required|string',
             'date' => 'required|date',
             'age_category_ids' => 'required|array|min:1',
             'age_category_ids.*' => 'required|exists:lookups,id',
             'description' => 'nullable|string',
             'active' => 'boolean',
         ]);
-        
+
         // Update tournament zonder age_category_ids
         $tournamentData = collect($validated)->except('age_category_ids')->toArray();
         $tournament->update($tournamentData);
-        
+
         // Sync de age categories via pivot table
         $tournament->ageCategories()->sync($validated['age_category_ids']);
-        
+
         // Laad de age categories voor de response
         $tournament->load('ageCategories');
-        
+
         return response()->json($tournament);
     }
 
@@ -118,7 +118,7 @@ class TournamentController extends Controller
     public function destroy(Tournament $tournament)
     {
         $tournament->delete();
-        
+
         return response()->json(['message' => 'Tournament deleted successfully']);
     }
 }

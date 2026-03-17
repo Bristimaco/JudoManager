@@ -26,11 +26,11 @@ function AddressMap({ address }) {
                     `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`
                 );
                 const data = await response.json();
-                
+
                 if (data && data.length > 0) {
                     const { lat, lon } = data[0];
                     // Create OpenStreetMap embed URL
-                    const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.01},${lat-0.01},${parseFloat(lon)+0.01},${parseFloat(lat)+0.01}&layer=mapnik&marker=${lat},${lon}`;
+                    const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.01},${lat - 0.01},${parseFloat(lon) + 0.01},${parseFloat(lat) + 0.01}&layer=mapnik&marker=${lat},${lon}`;
                     setMapUrl(osmUrl);
                 } else {
                     setError("Adres niet gevonden op kaart");
@@ -190,7 +190,7 @@ export default function TournamentDetailPage() {
                 `/api/tournaments/${id}`,
                 {
                     name: name.trim(),
-                    address: address.trim(), 
+                    address: address.trim(),
                     date: date || null,
                     age_category_ids: Array.from(selectedAgeCategories),
                     description: description.trim() || null,
@@ -382,7 +382,7 @@ export default function TournamentDetailPage() {
                             <h3 className="text-sm font-medium text-slate-700 mb-2">Locatie</h3>
                             <AddressMap address={address} />
                         </div>
-                        
+
                         {address && (
                             <div className="bg-slate-50 rounded-xl p-4">
                                 <div className="text-sm font-medium text-slate-700 mb-2">Adres</div>

@@ -65,7 +65,7 @@ export default function TournamentsPage() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         tournamentDate.setHours(0, 0, 0, 0);
-        
+
         if (tournamentDate >= today) {
             return <Badge tone="ok">Komend</Badge>;
         } else {
@@ -183,7 +183,7 @@ export default function TournamentsPage() {
                                             </Link>
                                             {tournament.description && (
                                                 <div className="text-xs text-slate-500 mt-1">
-                                                    {tournament.description.length > 100 
+                                                    {tournament.description.length > 100
                                                         ? tournament.description.substring(0, 100) + "..."
                                                         : tournament.description
                                                     }

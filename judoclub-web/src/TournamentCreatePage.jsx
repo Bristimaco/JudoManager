@@ -127,10 +127,10 @@ export default function TournamentCreatePage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-slate-700">Toernooi Naam *</label>
-                        <Input 
-                            value={name} 
-                            onChange={(e) => setName(e.target.value)} 
-                            placeholder="bv. Wintertoernooi 2026" 
+                        <Input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="bv. Wintertoernooi 2026"
                         />
                         {fe("name")}
                     </div>
