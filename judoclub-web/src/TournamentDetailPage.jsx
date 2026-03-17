@@ -126,6 +126,12 @@ export default function TournamentDetailPage() {
     // Send invitation to individual participant state
     const [sendingInvitationToMember, setSendingInvitationToMember] = useState(null);
 
+    // Confirm registration state
+    const [confirmingRegistration, setConfirmingRegistration] = useState(null);
+    const [registrationConfirmResult, setRegistrationConfirmResult] = useState(null);
+    const [unregisteringParticipant, setUnregisteringParticipant] = useState(null);
+    const [removingFromList, setRemovingFromList] = useState(null);
+
     // Add participant state
     const [availableMembers, setAvailableMembers] = useState([]);
     const [selectedMemberToAdd, setSelectedMemberToAdd] = useState("");
@@ -296,6 +302,74 @@ export default function TournamentDetailPage() {
             });
         } finally {
             setRemovingParticipant(null);
+        }
+    }
+
+    async function confirmRegistration(member) {
+        setConfirmingRegistration(member.id);
+        setRegistrationConfirmResult(null);
+        try {
+            const res = await api.post(
+                `/api/tournaments/${id}/participants/${member.id}/confirm-registration`,
+                {},
+                { headers: { Accept: "application/json" } }
+            );
+            setRegistrationConfirmResult({ type: 'success', message: res.data.message });
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) setEligibleMembers(tournamentRes.data.eligible_members);
+        } catch (e) {
+            setRegistrationConfirmResult({
+                type: 'error',
+                message: e?.response?.data?.message || e?.message || "Onbekende fout"
+            });
+        } finally {
+            setConfirmingRegistration(null);
+        }
+    }
+
+    async function unregisterParticipant(member) {
+        if (!window.confirm(`Ben je zeker dat je ${member.first_name} ${member.last_name} wilt uitschrijven? Er wordt een uitschrijvingsmail verstuurd.`)) {
+            return;
+        }
+        setUnregisteringParticipant(member.id);
+        try {
+            await api.post(
+                `/api/tournaments/${id}/participants/${member.id}/unregister`,
+                {},
+                { headers: { Accept: "application/json" } }
+            );
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) setEligibleMembers(tournamentRes.data.eligible_members);
+        } catch (e) {
+            setRegistrationConfirmResult({
+                type: 'error',
+                message: e?.response?.data?.message || e?.message || "Uitschrijven mislukt"
+            });
+        } finally {
+            setUnregisteringParticipant(null);
+        }
+    }
+
+    async function removeFromRegistrationList(member) {
+        if (!window.confirm(`Ben je zeker dat je ${member.first_name} ${member.last_name} wilt verplaatsen naar de overige deelnemers?`)) {
+            return;
+        }
+        setRemovingFromList(member.id);
+        try {
+            await api.post(
+                `/api/tournaments/${id}/participants/${member.id}/remove-from-registration-list`,
+                {},
+                { headers: { Accept: "application/json" } }
+            );
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) setEligibleMembers(tournamentRes.data.eligible_members);
+        } catch (e) {
+            setRegistrationConfirmResult({
+                type: 'error',
+                message: e?.response?.data?.message || e?.message || "Verwijderen mislukt"
+            });
+        } finally {
+            setRemovingFromList(null);
         }
     }
 
@@ -616,7 +690,7 @@ export default function TournamentDetailPage() {
 
     return (
         <AppLayout
-            title={tournamentTitle}
+            widetitle={tournamentTitle}
             subtitle="Bewerk toernooi gegevens."
             actions={
                 <>
@@ -946,6 +1020,12 @@ export default function TournamentDetailPage() {
                         </div>
                     )}
 
+                    {registrationConfirmResult && (
+                        <div className={`text-sm mb-3 p-3 rounded-lg ${registrationConfirmResult.type === 'success' ? 'text-green-800 bg-green-50' : 'text-red-800 bg-red-50'}`}>
+                            <div className="font-medium">{registrationConfirmResult.message}</div>
+                        </div>
+                    )}
+
                     {membersLoaded && (() => {
                         // Build age category order map from the loaded lookup list
                         const ageCategoryOrder = {};
@@ -965,11 +1045,11 @@ export default function TournamentDetailPage() {
                         });
 
                         const acceptedParticipants = sortParticipants(
-                            eligibleMembers.filter(m => m.response_status === 'accepted')
+                            eligibleMembers.filter(m => m.response_status === 'accepted' && m.registration_status !== 'verwijderd')
                         );
-                        const nonAcceptedParticipants = eligibleMembers.filter(m => m.response_status !== 'accepted');
+                        const nonAcceptedParticipants = eligibleMembers.filter(m => m.response_status !== 'accepted' || m.registration_status === 'verwijderd');
 
-                        const renderMemberRow = (member) => (
+                        const renderMemberRow = (member, showActions = true) => (
                             <tr key={member.id} className="hover:bg-slate-50 transition">
                                 <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800 font-medium">
                                     {member.license_number || '-'}
@@ -1013,6 +1093,12 @@ export default function TournamentDetailPage() {
                                                     {new Date(member.invited_at).toLocaleDateString('nl-NL')}
                                                 </div>
                                             )}
+                                            {member.registration_status === 'ingeschreven' && (
+                                                <div className="text-xs text-emerald-700 font-medium mt-1">Ingeschreven</div>
+                                            )}
+                                            {member.registration_status === 'uitgeschreven' && (
+                                                <div className="text-xs text-amber-700 font-medium mt-1">Uitgeschreven</div>
+                                            )}
                                         </>
                                     ) : member.response_status === 'declined' ? (
                                         <>
@@ -1036,8 +1122,69 @@ export default function TournamentDetailPage() {
                                         <Badge tone="neutral">Nog niet uitgenodigd</Badge>
                                     )}
                                 </td>
-                                <td className="border border-slate-300 px-3 py-2 text-center">
+                                {showActions && <td className="border border-slate-300 px-3 py-2 text-center">
                                     <div className="flex items-center justify-center gap-2">
+                                        {member.is_participant && phase === 'inschrijvingen_uitvoeren' && member.response_status === 'accepted' && (
+                                            <>
+                                                {/* No registration_status yet → confirm button */}
+                                                {!member.registration_status && (
+                                                    <button
+                                                        onClick={() => confirmRegistration(member)}
+                                                        disabled={confirmingRegistration === member.id}
+                                                        className="text-emerald-600 hover:text-emerald-800 disabled:text-emerald-300 transition-colors"
+                                                        title="Inschrijving bevestigen (stuur bevestigingsmail)"
+                                                    >
+                                                        {confirmingRegistration === member.id ? (
+                                                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                )}
+                                                {/* Ingeschreven → uitschrijven button */}
+                                                {member.registration_status === 'ingeschreven' && (
+                                                    <button
+                                                        onClick={() => unregisterParticipant(member)}
+                                                        disabled={unregisteringParticipant === member.id}
+                                                        className="text-amber-600 hover:text-amber-800 disabled:text-amber-300 transition-colors"
+                                                        title="Uitschrijven (stuur uitschrijvingsmail)"
+                                                    >
+                                                        {unregisteringParticipant === member.id ? (
+                                                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                )}
+                                                {/* Uitgeschreven → trash button to move to overige */}
+                                                {member.registration_status === 'uitgeschreven' && (
+                                                    <button
+                                                        onClick={() => removeFromRegistrationList(member)}
+                                                        disabled={removingFromList === member.id}
+                                                        className="text-red-600 hover:text-red-800 disabled:text-red-300 transition-colors"
+                                                        title="Verplaats naar overige deelnemers"
+                                                    >
+                                                        {removingFromList === member.id ? (
+                                                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
                                         {member.is_participant && phase === 'voorbereiding' && (
                                             <>
                                                 {member.participant_status === 'eligible' && (
@@ -1077,11 +1224,11 @@ export default function TournamentDetailPage() {
                                             </>
                                         )}
                                     </div>
-                                </td>
+                                </td>}
                             </tr>
                         );
 
-                        const participantTable = (rows) => (
+                        const participantTable = (rows, showActions = true) => (
                             <div className="overflow-x-auto">
                                 <table className="w-full border-collapse border border-slate-300">
                                     <thead className="bg-slate-100">
@@ -1093,11 +1240,11 @@ export default function TournamentDetailPage() {
                                             <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Gewichtsklasse</th>
                                             <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Email</th>
                                             <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Status</th>
-                                            <th className="border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700">Actie</th>
+                                            {showActions && <th className="border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700">Actie</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white">
-                                        {rows.map(renderMemberRow)}
+                                        {rows.map(m => renderMemberRow(m, showActions))}
                                     </tbody>
                                 </table>
                             </div>
@@ -1158,7 +1305,7 @@ export default function TournamentDetailPage() {
                                         </button>
                                         {expandedNonAccepted && (
                                             <div className="p-3">
-                                                {participantTable(nonAcceptedParticipants)}
+                                                {participantTable(nonAcceptedParticipants, false)}
                                             </div>
                                         )}
                                     </div>

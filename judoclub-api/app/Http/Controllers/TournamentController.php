@@ -8,6 +8,8 @@ use App\Models\Lookup;
 use App\Models\TournamentParticipant;
 use App\Mail\TournamentInvitation;
 use App\Mail\TournamentCancellation;
+use App\Mail\TournamentRegistrationConfirmation;
+use App\Mail\TournamentUnregistration;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
@@ -151,6 +153,7 @@ class TournamentController extends Controller
                 'is_participant' => true,  // These are current participants
                 'participant_status' => $participant->status,
                 'response_status' => $participant->response_status,
+                'registration_status' => $participant->registration_status,
                 'invitation_token' => $participant->invitation_token
             ];
         });
@@ -667,5 +670,84 @@ class TournamentController extends Controller
             'available_members' => $availableMembers,
             'total_available' => count($availableMembers)
         ]);
+    }
+
+    /**
+     * Confirm registration of an accepted participant and send confirmation email
+     */
+    public function confirmRegistration(Tournament $tournament, Member $member)
+    {
+        if ($tournament->phase !== 'inschrijvingen_uitvoeren') {
+            return response()->json(['message' => 'Inschrijvingen bevestigen is alleen mogelijk in de fase "Inschrijvingen uitvoeren".'], 403);
+        }
+
+        $participant = $tournament->participants()->where('member_id', $member->id)->first();
+
+        if (!$participant) {
+            return response()->json(['message' => 'Deelnemer niet gevonden.'], 404);
+        }
+
+        if ($participant->response_status !== 'accepted') {
+            return response()->json(['message' => 'Alleen deelnemers die hebben geaccepteerd kunnen worden ingeschreven.'], 422);
+        }
+
+        if (!$member->email) {
+            return response()->json(['message' => "Geen email adres voor {$member->first_name} {$member->last_name}"], 422);
+        }
+
+        try {
+            Mail::to($member->email)->send(new TournamentRegistrationConfirmation($tournament, $member));
+            $participant->update(['registration_status' => 'ingeschreven']);
+            return response()->json(['message' => "Inschrijvingsbevestiging verstuurd naar {$member->first_name} {$member->last_name}"]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Email versturen mislukt: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Unregister a participant (send unregistration email, set status to uitgeschreven)
+     */
+    public function unregisterParticipant(Tournament $tournament, Member $member)
+    {
+        if ($tournament->phase !== 'inschrijvingen_uitvoeren') {
+            return response()->json(['message' => 'Uitschrijven is alleen mogelijk in de fase "Inschrijvingen uitvoeren".'], 403);
+        }
+
+        $participant = $tournament->participants()->where('member_id', $member->id)->first();
+
+        if (!$participant) {
+            return response()->json(['message' => 'Deelnemer niet gevonden.'], 404);
+        }
+
+        if ($participant->registration_status !== 'ingeschreven') {
+            return response()->json(['message' => 'Alleen ingeschreven deelnemers kunnen worden uitgeschreven.'], 422);
+        }
+
+        if (!$member->email) {
+            return response()->json(['message' => "Geen email adres voor {$member->first_name} {$member->last_name}"], 422);
+        }
+
+        try {
+            Mail::to($member->email)->send(new TournamentUnregistration($tournament, $member));
+            $participant->update(['registration_status' => 'uitgeschreven']);
+            return response()->json(['message' => "{$member->first_name} {$member->last_name} is uitgeschreven en werd verwittigd per mail."]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Email versturen mislukt: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remove participant from confirmed list (move to overige deelnemers)
+     */
+    public function removeFromRegistrationList(Tournament $tournament, Member $member)
+    {
+        $participant = $tournament->participants()->where('member_id', $member->id)->first();
+
+        if (!$participant) {
+            return response()->json(['message' => 'Deelnemer niet gevonden.'], 404);
+        }
+
+        $participant->update(['registration_status' => 'verwijderd']);
+        return response()->json(['message' => "{$member->first_name} {$member->last_name} is verplaatst naar de lijst met overige deelnemers."]);
     }
 }

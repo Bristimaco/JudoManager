@@ -20,13 +20,14 @@ function NavItem({ to, children }) {
     );
 }
 
-export default function AppLayout({ title, subtitle, actions, children }) {
+export default function AppLayout({ title, subtitle, actions, children, wide }) {
     const { user, logout } = useAuth();
+    const maxW = wide ? "max-w-7xl" : "max-w-5xl";
 
     return (
         <div className="min-h-screen bg-slate-50">
             <header className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow">
-                <div className="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between gap-4">
+                <div className={`mx-auto ${maxW} px-4 py-4 flex items-center justify-between gap-4`}>
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl bg-white/10 grid place-items-center font-bold">
                             J
@@ -66,7 +67,7 @@ export default function AppLayout({ title, subtitle, actions, children }) {
                 </div>
             </header>
 
-            <main className="mx-auto max-w-5xl px-4 py-8">
+            <main className={`mx-auto ${maxW} px-4 py-8`}>
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
                     <div>
                         <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>

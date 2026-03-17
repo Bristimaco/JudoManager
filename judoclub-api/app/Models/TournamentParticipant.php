@@ -14,6 +14,7 @@ class TournamentParticipant extends Model
         'status',
         'invitation_token',
         'response_status',
+        'registration_status',
     ];
 
     protected $casts = [
