@@ -111,8 +111,53 @@ class TournamentController extends Controller
      */
     public function show(Tournament $tournament)
     {
-        $tournament->load('ageCategories');
-        return response()->json($tournament);
+        $tournament->load('ageCategories', 'participants.member');
+        $tournamentDate = Carbon::parse($tournament->date);
+        $tournamentYear = $tournamentDate->year;
+
+        // Format participants for response with all member info
+        $participants = $tournament->participants()->with('member')->get()->map(function ($participant) use ($tournamentYear) {
+            $member = $participant->member;
+            $birthYear = $member->birthdate ? Carbon::parse($member->birthdate)->year : null;
+            $ageOnTournament = $birthYear ? $tournamentYear - $birthYear : null;
+
+            // Determine age category
+            $ageCategories = Lookup::where('type', 'age_categories')
+                ->where('active', true)
+                ->orderBy('min_age', 'asc')
+                ->get();
+
+            $ageCategory = null;
+            if ($ageOnTournament) {
+                foreach ($ageCategories as $category) {
+                    if ($ageOnTournament >= $category->min_age) {
+                        $ageCategory = $category;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            return [
+                'id' => $member->id,
+                'first_name' => $member->first_name,
+                'last_name' => $member->last_name,
+                'email' => $member->email,
+                'license_number' => $member->license_number,
+                'weight_category' => $member->weight_category,
+                'age_on_tournament' => $ageOnTournament,
+                'calculated_age_category' => $ageCategory ? $ageCategory->label : '',
+                'is_participant' => true,  // These are current participants
+                'participant_status' => $participant->status,
+                'response_status' => $participant->response_status,
+                'invitation_token' => $participant->invitation_token
+            ];
+        });
+
+        $response = $tournament->toArray();
+        $response['eligible_members'] = $participants->toArray();
+
+        return response()->json($response);
     }
 
     /**
@@ -170,14 +215,21 @@ class TournamentController extends Controller
         $tournamentDate = Carbon::parse($tournament->date);
         $tournamentYear = $tournamentDate->year;
 
-        // Haal bestaande participants op voor dit toernooi (met member data)
-        $participants = TournamentParticipant::with('member')
-            ->where('tournament_id', $tournament->id)
+        // Haal alle actieve leden op die geïnteresseerd zijn in competitie
+        $allMembers = Member::where('active', true)
+            ->where('interested_in_competition', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
             ->get();
 
+        // Haal bestaande participants op voor dit toernooi (geïndexeerd op member_id)
+        $participants = TournamentParticipant::where('tournament_id', $tournament->id)
+            ->get()
+            ->keyBy('member_id');
+
         $eligibleMembers = [];
-        foreach ($participants as $participant) {
-            $member = $participant->member;
+
+        foreach ($allMembers as $member) {
             if (!$member->birthdate)
                 continue;
 
@@ -185,11 +237,22 @@ class TournamentController extends Controller
             $ageOnTournamentYear = $tournamentYear - $birthYear;
             $memberAgeCategory = $this->determineAgeCategory($ageOnTournamentYear);
 
+            if (!$memberAgeCategory)
+                continue;
+
+            // Controleer of de leeftijdscategorie van het lid overeenkomt met de toernooi leeftijdscategorieën
+            if (!$tournament->ageCategories->contains('id', $memberAgeCategory->id))
+                continue;
+
+            $participant = $participants->get($member->id);
+
             $memberData = $member->toArray();
             $memberData['age_on_tournament'] = $ageOnTournamentYear;
             $memberData['calculated_age_category'] = $memberAgeCategory->label ?? '';
-            $memberData['participant_status'] = $participant->status;
-            $memberData['invited_at'] = $participant->invited_at;
+            $memberData['participant_status'] = $participant ? $participant->status : null;
+            $memberData['response_status'] = $participant ? $participant->response_status : null;
+            $memberData['invited_at'] = $participant ? $participant->invited_at : null;
+            $memberData['is_participant'] = $participant !== null;
             $eligibleMembers[] = $memberData;
         }
 
@@ -270,8 +333,15 @@ class TournamentController extends Controller
             }
 
             try {
+                // Generate unique token if not already present
+                if (!$participant->invitation_token) {
+                    $participant->invitation_token = \Illuminate\Support\Str::random(32);
+                    $participant->response_status = 'pending';
+                    $participant->save();
+                }
+
                 // Send email
-                Mail::to($member->email)->send(new TournamentInvitation($tournament, $member));
+                Mail::to($member->email)->send(new TournamentInvitation($tournament, $member, $participant->invitation_token));
 
                 // Update participant status
                 $participant->update([
@@ -289,6 +359,76 @@ class TournamentController extends Controller
             'message' => "Uitnodigingen verzonden naar {$invitedCount} deelnemers",
             'invited_count' => $invitedCount,
             'errors' => $errors
+        ]);
+    }
+
+    /**
+     * Accept tournament invitation via token
+     */
+    public function acceptInvitation(Request $request)
+    {
+        $token = $request->query('token');
+
+        if (!$token) {
+            return view('invitation-response', [
+                'status' => 'error',
+                'message' => 'Ongeldig token',
+                'tournament' => null
+            ]);
+        }
+
+        $participant = TournamentParticipant::where('invitation_token', $token)->first();
+
+        if (!$participant) {
+            return view('invitation-response', [
+                'status' => 'error',
+                'message' => 'Uitnodiging niet gevonden',
+                'tournament' => null
+            ]);
+        }
+
+        $participant->update([
+            'response_status' => 'accepted'
+        ]);
+
+        return view('invitation-response', [
+            'status' => 'accepted',
+            'tournament' => $participant->tournament
+        ]);
+    }
+
+    /**
+     * Decline tournament invitation via token
+     */
+    public function declineInvitation(Request $request)
+    {
+        $token = $request->query('token');
+
+        if (!$token) {
+            return view('invitation-response', [
+                'status' => 'error',
+                'message' => 'Ongeldig token',
+                'tournament' => null
+            ]);
+        }
+
+        $participant = TournamentParticipant::where('invitation_token', $token)->first();
+
+        if (!$participant) {
+            return view('invitation-response', [
+                'status' => 'error',
+                'message' => 'Uitnodiging niet gevonden',
+                'tournament' => null
+            ]);
+        }
+
+        $participant->update([
+            'response_status' => 'declined'
+        ]);
+
+        return view('invitation-response', [
+            'status' => 'declined',
+            'tournament' => $participant->tournament
         ]);
     }
 
@@ -361,13 +501,21 @@ class TournamentController extends Controller
         $memberName = "{$member->first_name} {$member->last_name}";
 
         try {
+            // Generate unique token if not already present
+            if (!$participant->invitation_token) {
+                $participant->invitation_token = \Illuminate\Support\Str::random(32);
+                $participant->response_status = 'pending';
+                $participant->save();
+            }
+
             // Send invitation email
-            Mail::to($member->email)->send(new TournamentInvitation($tournament, $member));
+            Mail::to($member->email)->send(new TournamentInvitation($tournament, $member, $participant->invitation_token));
 
             // Update participant status to invited if not already
             $participant->update([
                 'status' => 'invited',
-                'invited_at' => now()
+                'invited_at' => now(),
+                'response_status' => 'pending'
             ]);
 
             return response()->json([

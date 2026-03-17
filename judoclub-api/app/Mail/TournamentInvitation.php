@@ -17,14 +17,16 @@ class TournamentInvitation extends Mailable
 
     public Tournament $tournament;
     public Member $member;
+    public string $invitationToken;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Tournament $tournament, Member $member)
+    public function __construct(Tournament $tournament, Member $member, string $invitationToken = '')
     {
         $this->tournament = $tournament;
         $this->member = $member;
+        $this->invitationToken = $invitationToken;
     }
 
     /**
@@ -42,11 +44,16 @@ class TournamentInvitation extends Mailable
      */
     public function content(): Content
     {
+        $baseUrl = config('app.url');
+
         return new Content(
             view: 'emails.tournament-invitation',
             with: [
                 'tournament' => $this->tournament,
                 'member' => $this->member,
+                'acceptUrl' => "{$baseUrl}/api/invitations/accept?token=" . $this->invitationToken,
+                'declineUrl' => "{$baseUrl}/api/invitations/decline?token=" . $this->invitationToken,
+                'invitationToken' => $this->invitationToken,
             ],
         );
     }

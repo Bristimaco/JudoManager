@@ -161,11 +161,66 @@ export default function TournamentDetailPage() {
 
             setEligibleMembers(res.data.eligible_members || []);
             setMembersLoaded(true);
-
-            // Also refresh available members when eligible members change
-            fetchAvailableMembers();
         } catch (e) {
             setMembersError(`Leden ophalen mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
+        } finally {
+            setFetchingMembers(false);
+        }
+    }
+
+    async function fetchAvailableMembers() {
+        try {
+            const res = await api.get(`/api/tournaments/${id}/available-members`, {
+                headers: { Accept: "application/json" }
+            });
+            setAvailableMembers(res.data || []);
+            setAvailableMembersLoaded(true);
+        } catch (e) {
+            console.error("Error fetching available members:", e);
+        }
+    }
+
+    async function refreshAndAddAllEligibleMembers() {
+        setFetchingMembers(true);
+        setMembersError("");
+
+        try {
+            // Fetch available (eligible, not yet participant) members
+            const availRes = await api.get(`/api/tournaments/${id}/available-members`, {
+                headers: { Accept: "application/json" }
+            });
+
+            const availableToAdd = availRes.data.available_members || [];
+
+            // Add all available members as participants
+            for (const member of availableToAdd) {
+                try {
+                    await api.post(`/api/tournaments/${id}/participants`, {
+                        member_id: member.id
+                    }, { headers: { Accept: "application/json" } });
+                } catch (e) {
+                    console.error(`Failed to add ${member.first_name} ${member.last_name}:`, e);
+                }
+            }
+
+            // Reload full tournament data to get complete participant info
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) {
+                setEligibleMembers(tournamentRes.data.eligible_members);
+                setMembersLoaded(true);
+            }
+
+            // Refresh available members dropdown (should now be empty)
+            await fetchAvailableMembers();
+
+            setInvitationResult({
+                type: 'success',
+                message: availableToAdd.length > 0
+                    ? `${availableToAdd.length} leden toegevoegd aan het toernooi`
+                    : 'Lijst is up-to-date, geen nieuwe leden om toe te voegen'
+            });
+        } catch (e) {
+            setMembersError(`Verversen mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         } finally {
             setFetchingMembers(false);
         }
@@ -187,9 +242,10 @@ export default function TournamentDetailPage() {
                 errors: res.data.errors || []
             });
 
-            // Refresh the eligible members to see updated statuses
-            if (membersLoaded) {
-                await fetchEligibleMembers();
+            // Reload full tournament data to get updated statuses
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) {
+                setEligibleMembers(tournamentRes.data.eligible_members);
             }
         } catch (e) {
             setInvitationResult({
@@ -222,7 +278,7 @@ export default function TournamentDetailPage() {
                 message: res.data.message
             });
 
-            // Remove from eligible members list directly
+            // Remove member completely from the list
             setEligibleMembers(prevMembers =>
                 prevMembers.filter(m => m.id !== member.id)
             );
@@ -236,6 +292,38 @@ export default function TournamentDetailPage() {
             });
         } finally {
             setRemovingParticipant(null);
+        }
+    }
+
+    async function inviteMember(member) {
+        if (!window.confirm(`Stuur een uitnodiging naar ${member.first_name} ${member.last_name}?`)) {
+            return;
+        }
+
+        setSendingInvitationToMember(member.id);
+
+        try {
+            // First add as participant if not yet
+            if (!member.is_participant) {
+                await api.post(`/api/tournaments/${id}/participants`, {
+                    member_id: member.id
+                }, { headers: { Accept: "application/json" } });
+            }
+
+            // Then send the invitation
+            const res = await api.post(`/api/tournaments/${id}/participants/${member.id}/send-invitation`, {}, {
+                headers: { Accept: "application/json" }
+            });
+
+            setInvitationResult({ type: 'success', message: res.data.message });
+            await fetchEligibleMembers();
+        } catch (e) {
+            setInvitationResult({
+                type: 'error',
+                message: `Uitnodiging versturen mislukt: ${e?.response?.data?.message || e?.message || "Onbekende fout"}`
+            });
+        } finally {
+            setSendingInvitationToMember(null);
         }
     }
 
@@ -258,8 +346,11 @@ export default function TournamentDetailPage() {
                 message: res.data.message
             });
 
-            // Refresh the eligible members list
-            await fetchEligibleMembers();
+            // Reload full tournament data to get updated statuses
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) {
+                setEligibleMembers(tournamentRes.data.eligible_members);
+            }
         } catch (e) {
             setInvitationResult({
                 type: 'error',
@@ -302,8 +393,40 @@ export default function TournamentDetailPage() {
                 message: res.data.message
             });
 
-            // Clear selection and refresh data
             setSelectedMemberToAdd("");
+
+            // Reload full tournament data to get complete participant info (license, weight, etc.)
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) {
+                setEligibleMembers(tournamentRes.data.eligible_members);
+            }
+
+            await fetchAvailableMembers();
+        } catch (e) {
+            setInvitationResult({
+                type: 'error',
+                message: e?.response?.data?.message || `Toevoegen mislukt: ${e?.message || "Onbekende fout"}`
+            });
+        } finally {
+            setAddingParticipant(false);
+        }
+    }
+
+    async function addParticipantById(memberId) {
+        setAddingParticipant(true);
+
+        try {
+            const res = await api.post(`/api/tournaments/${id}/participants`, {
+                member_id: memberId
+            }, {
+                headers: { Accept: "application/json" }
+            });
+
+            setInvitationResult({
+                type: 'success',
+                message: res.data.message
+            });
+
             await Promise.all([
                 fetchEligibleMembers(),
                 fetchAvailableMembers()
@@ -354,6 +477,12 @@ export default function TournamentDetailPage() {
             setCurrentFlyerPath(tournament.flyer ?? "");
             setDescription(tournament.description ?? "");
             setActive(!!tournament.active);
+
+            // Load current participants from tournament.eligible_members (which are current participants)
+            if (tournament.eligible_members) {
+                setEligibleMembers(tournament.eligible_members);
+                setMembersLoaded(true);
+            }
         } catch (e) {
             setError(`Laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         } finally {
@@ -361,12 +490,11 @@ export default function TournamentDetailPage() {
         }
     }
 
-    // Automatisch eligible members ophalen na het laden van tournament data
+    // Load tournament data with current participants from tournament.participants
     async function loadTournamentData() {
-        await load();
+        await load(); // This loads tournament.participants
         if (id) {
-            fetchEligibleMembers(); // Niet await, zodat het parallel loopt
-            fetchAvailableMembers(); // Haal ook beschikbare leden op
+            await fetchAvailableMembers(); // For the dropdown re-add feature
         }
     }
 
@@ -706,13 +834,13 @@ export default function TournamentDetailPage() {
                             <Button
                                 variant="blue"
                                 size="sm"
-                                onClick={fetchEligibleMembers}
+                                onClick={refreshAndAddAllEligibleMembers}
                                 disabled={fetchingMembers}
                             >
                                 {fetchingMembers ? "Verversen..." : "Ververs leden"}
                             </Button>
 
-                            {membersLoaded && eligibleMembers.length > 0 && (
+                            {membersLoaded && eligibleMembers.some(m => m.is_participant && m.participant_status === 'eligible') && (
                                 <Button
                                     variant="primary"
                                     size="sm"
@@ -723,7 +851,7 @@ export default function TournamentDetailPage() {
                                 </Button>
                             )}
 
-                            {/* Add participant inline */}
+                            {/* Deelnemer toevoegen via dropdown */}
                             <div className="flex items-center gap-2">
                                 <select
                                     value={selectedMemberToAdd}
@@ -736,7 +864,7 @@ export default function TournamentDetailPage() {
                                             ? "Leden laden..."
                                             : availableMembers.length === 0
                                                 ? "Geen beschikbare leden"
-                                                : "-- Kies lid --"}
+                                                : "-- Lid toevoegen --"}
                                     </option>
                                     {availableMembers.map((member) => (
                                         <option key={member.id} value={member.id}>
@@ -833,59 +961,79 @@ export default function TournamentDetailPage() {
                                                             {member.email || '-'}
                                                         </td>
                                                         <td className="border border-slate-300 px-3 py-2 text-sm">
-                                                            <Badge
-                                                                tone={member.participant_status === 'invited' ? 'ok' :
-                                                                    member.participant_status === 'eligible' ? 'warning' : 'info'}
-                                                                size="sm"
-                                                            >
-                                                                {member.participant_status === 'eligible' ? 'Nog uit te nodigen' :
-                                                                    member.participant_status === 'invited' ? 'Uitgenodigd' :
-                                                                        member.participant_status}
-                                                            </Badge>
-                                                            {member.invited_at && (
-                                                                <div className="text-xs text-slate-500 mt-1">
-                                                                    {new Date(member.invited_at).toLocaleDateString('nl-NL')}
-                                                                </div>
+                                                            {!member.is_participant ? (
+                                                                <Badge tone="neutral">Nog niet toegevoegd</Badge>
+                                                            ) : member.response_status === 'accepted' ? (
+                                                                <>
+                                                                    <Badge tone="ok">✓ Geaccepteerd</Badge>
+                                                                    {member.invited_at && (
+                                                                        <div className="text-xs text-slate-500 mt-1">
+                                                                            {new Date(member.invited_at).toLocaleDateString('nl-NL')}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            ) : member.response_status === 'declined' ? (
+                                                                <>
+                                                                    <Badge tone="critical">✗ Afgewezen</Badge>
+                                                                    {member.invited_at && (
+                                                                        <div className="text-xs text-slate-500 mt-1">
+                                                                            {new Date(member.invited_at).toLocaleDateString('nl-NL')}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            ) : member.participant_status === 'invited' ? (
+                                                                <>
+                                                                    <Badge tone="warning">Uitgenodigd</Badge>
+                                                                    {member.invited_at && (
+                                                                        <div className="text-xs text-slate-500 mt-1">
+                                                                            {new Date(member.invited_at).toLocaleDateString('nl-NL')}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <Badge tone="neutral">Nog niet uitgenodigd</Badge>
                                                             )}
                                                         </td>
                                                         <td className="border border-slate-300 px-3 py-2 text-center">
                                                             <div className="flex items-center justify-center gap-2">
-                                                                {member.participant_status === 'eligible' && (
-                                                                    <button
-                                                                        onClick={() => sendInvitationToMember(member)}
-                                                                        disabled={sendingInvitationToMember === member.id}
-                                                                        className="text-blue-600 hover:text-blue-800 disabled:text-blue-300 transition-colors"
-                                                                        title="Verstuur uitnodiging naar deze deelnemer"
-                                                                    >
-                                                                        {sendingInvitationToMember === member.id ? (
-                                                                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                                            </svg>
-                                                                        ) : (
-                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                                            </svg>
+                                                                {member.is_participant && (
+                                                                    <>
+                                                                        {member.participant_status === 'eligible' && (
+                                                                            <button
+                                                                                onClick={() => inviteMember(member)}
+                                                                                disabled={sendingInvitationToMember === member.id}
+                                                                                className="text-blue-600 hover:text-blue-800 disabled:text-blue-300 transition-colors"
+                                                                                title="Verstuur uitnodiging"
+                                                                            >
+                                                                                {sendingInvitationToMember === member.id ? (
+                                                                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                                                    </svg>
+                                                                                ) : (
+                                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                                                    </svg>
+                                                                                )}
+                                                                            </button>
                                                                         )}
-                                                                    </button>
+                                                                        <button
+                                                                            onClick={() => removeParticipant(member)}
+                                                                            disabled={removingParticipant === member.id}
+                                                                            className="text-red-600 hover:text-red-800 disabled:text-red-300 transition-colors"
+                                                                            title={member.participant_status === 'invited' ? 'Afzeggen en afmeldmail versturen' : 'Verwijder van toernooi'}
+                                                                        >
+                                                                            {removingParticipant === member.id ? (
+                                                                                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                                                </svg>
+                                                                            ) : (
+                                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                </svg>
+                                                                            )}
+                                                                        </button>
+                                                                    </>
                                                                 )}
-                                                                <button
-                                                                    onClick={() => removeParticipant(member)}
-                                                                    disabled={removingParticipant === member.id}
-                                                                    className="text-red-600 hover:text-red-800 disabled:text-red-300 transition-colors"
-                                                                    title={member.participant_status === 'invited'
-                                                                        ? 'Afzeggen en afmeldmail versturen'
-                                                                        : 'Verwijder van toernooi'}
-                                                                >
-                                                                    {removingParticipant === member.id ? (
-                                                                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                                        </svg>
-                                                                    ) : (
-                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                        </svg>
-                                                                    )}
-                                                                </button>
                                                             </div>
                                                         </td>
                                                     </tr>

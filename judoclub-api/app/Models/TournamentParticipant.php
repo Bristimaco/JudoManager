@@ -12,6 +12,8 @@ class TournamentParticipant extends Model
         'member_id',
         'invited_at',
         'status',
+        'invitation_token',
+        'response_status',
     ];
 
     protected $casts = [

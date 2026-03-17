@@ -37,10 +37,41 @@
             border-left: 4px solid #2563eb;
         }
 
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 25px 0;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .btn-accept {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .btn-decline {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
         .footer {
             text-align: center;
             margin-top: 30px;
-            font-size: 14px;
+            font-size: 12px;
             color: #64748b;
         }
     </style>
@@ -61,25 +92,28 @@
             @if($tournament->date)
                 <p><strong>Datum:</strong> {{ \Carbon\Carbon::parse($tournament->date)->format('d-m-Y') }}</p>
             @endif
-            @if($tournament->location)
-                <p><strong>Locatie:</strong> {{ $tournament->location }}</p>
+            @if($tournament->address)
+                <p><strong>Locatie:</strong> {{ $tournament->address }}</p>
             @endif
             @if($tournament->description)
                 <p><strong>Omschrijving:</strong> {{ $tournament->description }}</p>
             @endif
-            @if($tournament->age_category)
-                <p><strong>Leeftijdscategorie:</strong> {{ $tournament->age_category }}</p>
-            @endif
-            @if($tournament->weight_category)
-                <p><strong>Gewichtscategorie:</strong> {{ $tournament->weight_category }}</p>
-            @endif
         </div>
 
-        <p>Op basis van jouw profiel (leeftijd: {{ $member->age_category ?? 'onbekend' }}, gewicht:
-            {{ $member->weight_category ?? 'onbekend' }}, gordel: {{ $member->belt ?? 'onbekend' }}) ben je geschikt
-            voor dit toernooi.</p>
+        <p>Op basis van jouw profiel ben je geschikt voor dit toernooi.</p>
 
-        <p>Neem contact op met de judoclub om je deelname te bevestigen of af te zeggen.</p>
+        <p style="font-weight: bold; text-align: center; color: #2563eb; margin: 20px 0;">
+            Wil je aan dit toernooi deelnemen?
+        </p>
+
+        <div class="action-buttons">
+            <a href="{{ $acceptUrl }}" class="btn btn-accept">✓ Ja, ik neem deel!</a>
+            <a href="{{ $declineUrl }}" class="btn btn-decline">✗ Nee, ik doe niet mee</a>
+        </div>
+
+        <p style="font-size: 12px; color: #64748b; text-align: center;">
+            Klik op een van de knoppen hierboven om je antwoord in te stellen.
+        </p>
 
         <p>Veel succes en plezier!</p>
 

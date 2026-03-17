@@ -68,9 +68,12 @@ export function Badge({ tone = "neutral", children }) {
         neutral: "bg-slate-100 text-slate-600",
         ok: "bg-emerald-50 text-emerald-700",
         warn: "bg-amber-50 text-amber-700",
+        warning: "bg-amber-50 text-amber-700",
+        critical: "bg-red-50 text-red-700",
+        info: "bg-blue-50 text-blue-700",
     };
     return (
-        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${tones[tone]}`}>
+        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone] ?? tones.neutral}`}>
             {children}
         </span>
     );

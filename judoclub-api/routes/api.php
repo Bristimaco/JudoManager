@@ -137,3 +137,7 @@ Route::post('/logout', function (Request $request) {
 
     return response()->json(['message' => 'Logged out']);
 });
+
+// Public invitation response endpoints (no authentication required)
+Route::get('/invitations/accept', [TournamentController::class, 'acceptInvitation'])->name('invitations.accept');
+Route::get('/invitations/decline', [TournamentController::class, 'declineInvitation'])->name('invitations.decline');
