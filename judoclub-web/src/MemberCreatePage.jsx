@@ -24,10 +24,10 @@ export default function MemberCreatePage() {
 
   const [belts, setBelts] = useState([]);
   const [beltsLoading, setBeltsLoading] = useState(true);
-  
+
   // Belt colors voor mapping belt naam -> kleur (consistent met andere components)
   const [beltColors, setBeltColors] = useState({});
-  
+
   // Belt color definitions (consistent met LookupListPage)
   const beltColorDefinitions = [
     { name: 'wit', hex: '#FFFFFF', border: true },
@@ -38,7 +38,7 @@ export default function MemberCreatePage() {
     { name: 'bruin', hex: '#8B4513' },
     { name: 'zwart', hex: '#000000' }
   ];
-  
+
   // Helper functie voor belt color data
   const getBeltColorData = (beltName) => {
     if (!beltName) return null;
@@ -189,7 +189,7 @@ export default function MemberCreatePage() {
       const data = pluckData(res);
       const activeBelts = data.filter((x) => x.active);
       setBelts(activeBelts);
-      
+
       // Load belt colors mapping
       const colorMap = {};
       activeBelts.forEach(belt => {
@@ -341,9 +341,8 @@ export default function MemberCreatePage() {
                   <button
                     type="button"
                     onClick={() => setBelt("")}
-                    className={`px-3 py-2 text-sm rounded-lg border-2 hover:shadow-sm transition-shadow ${
-                      belt === "" ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
-                    }`}
+                    className={`px-3 py-2 text-sm rounded-lg border-2 hover:shadow-sm transition-shadow ${belt === "" ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
+                      }`}
                   >
                     Geen gordel
                   </button>
@@ -354,15 +353,13 @@ export default function MemberCreatePage() {
                         key={b.id}
                         type="button"
                         onClick={() => setBelt(b.label)}
-                        className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border-2 hover:shadow-sm transition-shadow ${
-                          belt === b.label ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
-                        }`}
+                        className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border-2 hover:shadow-sm transition-shadow ${belt === b.label ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
+                          }`}
                       >
                         {colorData && (
                           <div
-                            className={`w-5 h-5 rounded border-2 border-gray-300 ${
-                              colorData.border ? "shadow-inner" : ""
-                            }`}
+                            className={`w-5 h-5 rounded border-2 border-gray-300 ${colorData.border ? "shadow-inner" : ""
+                              }`}
                             style={{ backgroundColor: colorData.hex }}
                           />
                         )}

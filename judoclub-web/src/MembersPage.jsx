@@ -22,7 +22,7 @@ export default function MembersPage() {
 
     // Belt colors voor mapping belt naam -> kleur (consistent met LookupListPage)
     const [beltColors, setBeltColors] = useState({});
-    
+
     // Belt color definitions (consistent met LookupListPage)
     const beltColorDefinitions = [
         { name: 'wit', hex: '#FFFFFF', border: true },
@@ -33,23 +33,23 @@ export default function MembersPage() {
         { name: 'bruin', hex: '#8B4513' },
         { name: 'zwart', hex: '#000000' }
     ];
-    
+
     // Helper functie voor belt colors
     const getBeltColorData = (beltName) => {
         if (!beltName) return null;
         const colorName = beltColors[beltName];
         return beltColorDefinitions.find(c => c.name === colorName);
     };
-    
+
     // Component voor belt color display
     const BeltColorDisplay = ({ beltName }) => {
         const colorData = getBeltColorData(beltName);
         if (!colorData) {
             return <span className="text-slate-500">{beltName || "-"}</span>;
         }
-        
+
         return (
-            <div 
+            <div
                 className={`w-6 h-6 rounded border-2 border-gray-300 ${colorData.border ? 'shadow-inner' : ''}`}
                 style={{ backgroundColor: colorData.hex }}
                 title={`${beltName} (${colorData.name.charAt(0).toUpperCase() + colorData.name.slice(1)})`}
@@ -84,16 +84,16 @@ export default function MembersPage() {
                 params: { type: "belts", per_page: 200 },
                 headers: { Accept: "application/json" },
             });
-            
+
             const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
             const colorMap = {};
-            
+
             data.forEach(belt => {
                 if (belt.color) {
                     colorMap[belt.label] = belt.color;
                 }
             });
-            
+
             setBeltColors(colorMap);
         } catch (e) {
             console.error("Failed to load belt colors", e);

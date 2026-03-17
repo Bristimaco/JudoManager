@@ -12,7 +12,7 @@ export function Button({ variant = "default", className = "", ...props }) {
         secondary:
             "bg-white text-slate-900 border border-slate-300 hover:bg-slate-100 focus:ring-slate-200",
         danger:
-            "bg-white text-slate-900 border border-slate-300 hover:bg-slate-100 focus:ring-slate-200",
+            "bg-red-600 text-white border border-red-600 hover:bg-red-700 focus:ring-red-200",
     };
 
     return (

@@ -42,7 +42,7 @@ export default function LookupListPage() {
         { name: 'bruin', hex: '#8B4513' },
         { name: 'zwart', hex: '#000000' }
     ];
-    
+
     // Find color object by name
     const getColorByName = (colorName) => beltColors.find(c => c.name === colorName);
 
@@ -319,9 +319,8 @@ export default function LookupListPage() {
                             <button
                                 type="button"
                                 onClick={() => setColor("")}
-                                className={`w-8 h-8 rounded-lg border-2 bg-gray-100 flex items-center justify-center text-xs text-gray-600 hover:shadow-sm transition-shadow ${
-                                    color === "" ? "border-blue-500" : "border-gray-300"
-                                }`}
+                                className={`w-8 h-8 rounded-lg border-2 bg-gray-100 flex items-center justify-center text-xs text-gray-600 hover:shadow-sm transition-shadow ${color === "" ? "border-blue-500" : "border-gray-300"
+                                    }`}
                                 title="Geen kleur"
                             >
                                 —
@@ -331,9 +330,8 @@ export default function LookupListPage() {
                                     key={c.name}
                                     type="button"
                                     onClick={() => setColor(c.name)}
-                                    className={`w-8 h-8 rounded-lg border-2 hover:shadow-sm transition-shadow ${
-                                        color === c.name ? "border-blue-500 border-4" : "border-gray-300"
-                                    } ${c.border ? "shadow-inner" : ""}`}
+                                    className={`w-8 h-8 rounded-lg border-2 hover:shadow-sm transition-shadow ${color === c.name ? "border-blue-500 border-4" : "border-gray-300"
+                                        } ${c.border ? "shadow-inner" : ""}`}
                                     style={{ backgroundColor: c.hex }}
                                     title={c.name.charAt(0).toUpperCase() + c.name.slice(1)}
                                 />
@@ -443,9 +441,8 @@ export default function LookupListPage() {
                                                             onClick={() => {
                                                                 updateColor(it, "");
                                                             }}
-                                                            className={`w-6 h-6 rounded border-2 bg-gray-100 flex items-center justify-center text-xs text-gray-600 hover:shadow-sm transition-shadow ${
-                                                                (it.color ?? "") === "" ? "border-blue-500" : "border-gray-300"
-                                                            }`}
+                                                            className={`w-6 h-6 rounded border-2 bg-gray-100 flex items-center justify-center text-xs text-gray-600 hover:shadow-sm transition-shadow ${(it.color ?? "") === "" ? "border-blue-500" : "border-gray-300"
+                                                                }`}
                                                             title="Geen kleur"
                                                         >
                                                             —
@@ -457,9 +454,8 @@ export default function LookupListPage() {
                                                                 onClick={() => {
                                                                     updateColor(it, c.name);
                                                                 }}
-                                                                className={`w-6 h-6 rounded border-2 hover:shadow-sm transition-shadow ${
-                                                                    it.color === c.name ? "border-blue-500 border-3" : "border-gray-300"
-                                                                } ${c.border ? "shadow-inner" : ""}`}
+                                                                className={`w-6 h-6 rounded border-2 hover:shadow-sm transition-shadow ${it.color === c.name ? "border-blue-500 border-3" : "border-gray-300"
+                                                                    } ${c.border ? "shadow-inner" : ""}`}
                                                                 style={{ backgroundColor: c.hex }}
                                                                 title={c.name.charAt(0).toUpperCase() + c.name.slice(1)}
                                                             />
@@ -479,7 +475,7 @@ export default function LookupListPage() {
                                                         title="Klik om te bewerken"
                                                     >
                                                         {it.color ? (
-                                                            <div 
+                                                            <div
                                                                 className={`w-6 h-6 rounded border-2 border-gray-300 ${getColorByName(it.color)?.border ? 'shadow-inner' : ''}`}
                                                                 style={{ backgroundColor: getColorByName(it.color)?.hex || '#CCCCCC' }}
                                                                 title={it.color.charAt(0).toUpperCase() + it.color.slice(1)}
