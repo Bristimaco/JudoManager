@@ -104,6 +104,8 @@ export default function TournamentDetailPage() {
     const [currentFlyerPath, setCurrentFlyerPath] = useState("");
     const [description, setDescription] = useState("");
     const [active, setActive] = useState(true);
+    const [phase, setPhase] = useState("voorbereiding");
+    const [invitationDeadline, setInvitationDeadline] = useState("");
 
     const [ageCategories, setAgeCategories] = useState([]);
     const [ageLoading, setAgeLoading] = useState(true);
@@ -129,6 +131,9 @@ export default function TournamentDetailPage() {
     const [selectedMemberToAdd, setSelectedMemberToAdd] = useState("");
     const [addingParticipant, setAddingParticipant] = useState(false);
     const [availableMembersLoaded, setAvailableMembersLoaded] = useState(false);
+
+    // Collapsible non-accepted participants
+    const [expandedNonAccepted, setExpandedNonAccepted] = useState(false);
 
     // Helper: ondersteunt zowel array response als paginator {data, meta, links}
     function pluckData(res) {
@@ -476,6 +481,8 @@ export default function TournamentDetailPage() {
             setCurrentFlyerPath(tournament.flyer ?? "");
             setDescription(tournament.description ?? "");
             setActive(!!tournament.active);
+            setPhase(tournament.phase ?? "voorbereiding");
+            setInvitationDeadline(tournament.invitation_deadline ? String(tournament.invitation_deadline).split("T")[0] : "");
 
             // Load current participants from tournament.eligible_members (which are current participants)
             if (tournament.eligible_members) {
@@ -543,6 +550,8 @@ export default function TournamentDetailPage() {
             }
             formData.append('description', description.trim() || '');
             formData.append('active', active ? '1' : '0');
+            formData.append('phase', phase);
+            if (invitationDeadline) formData.append('invitation_deadline', invitationDeadline);
 
             await api.put(
                 `/api/tournaments/${id}`,
@@ -727,6 +736,32 @@ export default function TournamentDetailPage() {
                             </div>
                         </div>
 
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Fase</label>
+                                <select
+                                    value={phase}
+                                    onChange={(e) => setPhase(e.target.value)}
+                                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300"
+                                >
+                                    <option value="voorbereiding">Voorbereiding</option>
+                                    <option value="inschrijvingen_uitvoeren">Inschrijvingen uitvoeren</option>
+                                    <option value="afgelopen">Afgelopen</option>
+                                </select>
+                                {fe("phase")}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Uitnodiging accepteren tegen</label>
+                                <DatePickerInput
+                                    value={invitationDeadline || null}
+                                    onChange={(iso) => setInvitationDeadline(iso ?? "")}
+                                    placeholder="Kies deadline..."
+                                />
+                                {invitationDeadline && <div className="mt-1 text-xs text-slate-500">Weergave: {formatDateBE(invitationDeadline)}</div>}
+                                {fe("invitation_deadline")}
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-slate-700">Beschrijving</label>
                             <textarea
@@ -825,60 +860,68 @@ export default function TournamentDetailPage() {
                 </div>
 
                 <div className="px-4 py-4">
-                    <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                        <Button
-                            variant="blue"
-                            size="sm"
-                            onClick={refreshAndAddAllEligibleMembers}
-                            disabled={fetchingMembers}
-                        >
-                            {fetchingMembers ? "Verversen..." : "Ververs leden"}
-                        </Button>
-
-                        {membersLoaded && eligibleMembers.some(m => m.is_participant && m.participant_status === 'eligible') && (
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={sendInvitations}
-                                disabled={sendingInvitations}
-                            >
-                                {sendingInvitations ? "Verzenden..." : "Verstuur uitnodigingen"}
-                            </Button>
-                        )}
-
-                        {/* Deelnemer toevoegen via dropdown */}
-                        <div className="flex items-center gap-2">
-                            <select
-                                value={selectedMemberToAdd}
-                                onChange={(e) => setSelectedMemberToAdd(e.target.value)}
-                                disabled={!availableMembersLoaded || availableMembers.length === 0}
-                                className="text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
-                            >
-                                <option value="">
-                                    {!availableMembersLoaded
-                                        ? "Leden laden..."
-                                        : availableMembers.length === 0
-                                            ? "Geen beschikbare leden"
-                                            : "-- Lid toevoegen --"}
-                                </option>
-                                {availableMembers.map((member) => (
-                                    <option key={member.id} value={member.id}>
-                                        {member.first_name} {member.last_name}
-                                    </option>
-                                ))}
-                            </select>
-                            <Button
-                                variant="success"
-                                size="sm"
-                                onClick={addParticipant}
-                                disabled={!selectedMemberToAdd || addingParticipant || !availableMembersLoaded}
-                            >
-                                {addingParticipant ? "Toevoegen..." : "Toevoegen"}
-                            </Button>
+                    {phase !== 'voorbereiding' && (
+                        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                            De inschrijvingsperiode is afgesloten. Deelnemers kunnen niet meer worden toegevoegd of verwijderd.
                         </div>
+                    )}
 
-                        {fetchingMembers && <span className="text-sm text-slate-600">Leden ophalen...</span>}
-                    </div>
+                    {phase === 'voorbereiding' && (
+                        <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                            <Button
+                                variant="blue"
+                                size="sm"
+                                onClick={refreshAndAddAllEligibleMembers}
+                                disabled={fetchingMembers}
+                            >
+                                {fetchingMembers ? "Verversen..." : "Ververs leden"}
+                            </Button>
+
+                            {membersLoaded && eligibleMembers.some(m => m.is_participant && m.participant_status === 'eligible') && (
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={sendInvitations}
+                                    disabled={sendingInvitations}
+                                >
+                                    {sendingInvitations ? "Verzenden..." : "Verstuur uitnodigingen"}
+                                </Button>
+                            )}
+
+                            {/* Deelnemer toevoegen via dropdown */}
+                            <div className="flex items-center gap-2">
+                                <select
+                                    value={selectedMemberToAdd}
+                                    onChange={(e) => setSelectedMemberToAdd(e.target.value)}
+                                    disabled={!availableMembersLoaded || availableMembers.length === 0}
+                                    className="text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+                                >
+                                    <option value="">
+                                        {!availableMembersLoaded
+                                            ? "Leden laden..."
+                                            : availableMembers.length === 0
+                                                ? "Geen beschikbare leden"
+                                                : "-- Lid toevoegen --"}
+                                    </option>
+                                    {availableMembers.map((member) => (
+                                        <option key={member.id} value={member.id}>
+                                            {member.first_name} {member.last_name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <Button
+                                    variant="success"
+                                    size="sm"
+                                    onClick={addParticipant}
+                                    disabled={!selectedMemberToAdd || addingParticipant || !availableMembersLoaded}
+                                >
+                                    {addingParticipant ? "Toevoegen..." : "Toevoegen"}
+                                </Button>
+                            </div>
+
+                            {fetchingMembers && <span className="text-sm text-slate-600">Leden ophalen...</span>}
+                        </div>
+                    )}
 
                     {membersError && (
                         <div className="text-sm text-red-600 mb-3 p-3 bg-red-50 rounded-lg">
@@ -903,159 +946,203 @@ export default function TournamentDetailPage() {
                         </div>
                     )}
 
-                    {membersLoaded && (
-                        <div>
-                            <div className="text-sm text-slate-600 mb-3">
-                                <strong>{eligibleMembers.length}</strong> leden komen in aanmerking voor deelname
-                            </div>
+                    {membersLoaded && (() => {
+                        const acceptedParticipants = eligibleMembers.filter(m => m.response_status === 'accepted');
+                        const nonAcceptedParticipants = eligibleMembers.filter(m => m.response_status !== 'accepted');
 
-                            {eligibleMembers.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full border-collapse border border-slate-300">
-                                        <thead className="bg-slate-100">
-                                            <tr>
-                                                <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
-                                                    Licentie
-                                                </th>
-                                                <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
-                                                    Naam
-                                                </th>
-                                                <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
-                                                    Leeftijdscategorie
-                                                </th>
-                                                <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
-                                                    Gewichtsklasse
-                                                </th>
-                                                <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
-                                                    Email
-                                                </th>
-                                                <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
-                                                    Status
-                                                </th>
-                                                <th className="border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700">
-                                                    Actie
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white">
-                                            {eligibleMembers.map((member) => (
-                                                <tr key={member.id} className="hover:bg-slate-50 transition">
-                                                    <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800 font-medium">
-                                                        {member.license_number || '-'}
-                                                    </td>
-                                                    <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
-                                                        <span className="flex items-center gap-1.5">
-                                                            {member.first_name} {member.last_name}
-                                                            <a
-                                                                href={`/members/${member.id}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                title="Lidkaart openen"
-                                                                className="text-slate-400 hover:text-blue-600 transition-colors flex-shrink-0"
-                                                            >
-                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                                </svg>
-                                                            </a>
-                                                        </span>
-                                                    </td>
-                                                    <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
-                                                        {member.calculated_age_category}
-                                                    </td>
-                                                    <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
-                                                        {member.weight_category || '-'}
-                                                    </td>
-                                                    <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
-                                                        {member.email || '-'}
-                                                    </td>
-                                                    <td className="border border-slate-300 px-3 py-2 text-sm">
-                                                        {!member.is_participant ? (
-                                                            <Badge tone="neutral">Nog niet toegevoegd</Badge>
-                                                        ) : member.response_status === 'accepted' ? (
-                                                            <>
-                                                                <Badge tone="ok">✓ Geaccepteerd</Badge>
-                                                                {member.invited_at && (
-                                                                    <div className="text-xs text-slate-500 mt-1">
-                                                                        {new Date(member.invited_at).toLocaleDateString('nl-NL')}
-                                                                    </div>
-                                                                )}
-                                                            </>
-                                                        ) : member.response_status === 'declined' ? (
-                                                            <>
-                                                                <Badge tone="critical">✗ Afgewezen</Badge>
-                                                                {member.invited_at && (
-                                                                    <div className="text-xs text-slate-500 mt-1">
-                                                                        {new Date(member.invited_at).toLocaleDateString('nl-NL')}
-                                                                    </div>
-                                                                )}
-                                                            </>
-                                                        ) : member.participant_status === 'invited' ? (
-                                                            <>
-                                                                <Badge tone="warning">Uitgenodigd</Badge>
-                                                                {member.invited_at && (
-                                                                    <div className="text-xs text-slate-500 mt-1">
-                                                                        {new Date(member.invited_at).toLocaleDateString('nl-NL')}
-                                                                    </div>
-                                                                )}
-                                                            </>
+                        const renderMemberRow = (member) => (
+                            <tr key={member.id} className="hover:bg-slate-50 transition">
+                                <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800 font-medium">
+                                    {member.license_number || '-'}
+                                </td>
+                                <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                    <span className="flex items-center gap-1.5">
+                                        {member.first_name} {member.last_name}
+                                        <a
+                                            href={`/members/${member.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title="Lidkaart openen"
+                                            className="text-slate-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                                        >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </a>
+                                    </span>
+                                </td>
+                                <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                    {member.calculated_age_category}
+                                </td>
+                                <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                    {member.weight_category || '-'}
+                                </td>
+                                <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                    {member.email || '-'}
+                                </td>
+                                <td className="border border-slate-300 px-3 py-2 text-sm">
+                                    {!member.is_participant ? (
+                                        <Badge tone="neutral">Nog niet toegevoegd</Badge>
+                                    ) : member.response_status === 'accepted' ? (
+                                        <>
+                                            <Badge tone="ok">✓ Geaccepteerd</Badge>
+                                            {member.invited_at && (
+                                                <div className="text-xs text-slate-500 mt-1">
+                                                    {new Date(member.invited_at).toLocaleDateString('nl-NL')}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : member.response_status === 'declined' ? (
+                                        <>
+                                            <Badge tone="critical">✗ Afgewezen</Badge>
+                                            {member.invited_at && (
+                                                <div className="text-xs text-slate-500 mt-1">
+                                                    {new Date(member.invited_at).toLocaleDateString('nl-NL')}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : member.participant_status === 'invited' ? (
+                                        <>
+                                            <Badge tone="warning">Uitgenodigd</Badge>
+                                            {member.invited_at && (
+                                                <div className="text-xs text-slate-500 mt-1">
+                                                    {new Date(member.invited_at).toLocaleDateString('nl-NL')}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Badge tone="neutral">Nog niet uitgenodigd</Badge>
+                                    )}
+                                </td>
+                                <td className="border border-slate-300 px-3 py-2 text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                        {member.is_participant && phase === 'voorbereiding' && (
+                                            <>
+                                                {member.participant_status === 'eligible' && (
+                                                    <button
+                                                        onClick={() => inviteMember(member)}
+                                                        disabled={sendingInvitationToMember === member.id}
+                                                        className="text-blue-600 hover:text-blue-800 disabled:text-blue-300 transition-colors"
+                                                        title="Verstuur uitnodiging"
+                                                    >
+                                                        {sendingInvitationToMember === member.id ? (
+                                                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
                                                         ) : (
-                                                            <Badge tone="neutral">Nog niet uitgenodigd</Badge>
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                            </svg>
                                                         )}
-                                                    </td>
-                                                    <td className="border border-slate-300 px-3 py-2 text-center">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            {member.is_participant && (
-                                                                <>
-                                                                    {member.participant_status === 'eligible' && (
-                                                                        <button
-                                                                            onClick={() => inviteMember(member)}
-                                                                            disabled={sendingInvitationToMember === member.id}
-                                                                            className="text-blue-600 hover:text-blue-800 disabled:text-blue-300 transition-colors"
-                                                                            title="Verstuur uitnodiging"
-                                                                        >
-                                                                            {sendingInvitationToMember === member.id ? (
-                                                                                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                                                </svg>
-                                                                            ) : (
-                                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                                                </svg>
-                                                                            )}
-                                                                        </button>
-                                                                    )}
-                                                                    <button
-                                                                        onClick={() => removeParticipant(member)}
-                                                                        disabled={removingParticipant === member.id}
-                                                                        className="text-red-600 hover:text-red-800 disabled:text-red-300 transition-colors"
-                                                                        title={member.participant_status === 'invited' ? 'Afzeggen en afmeldmail versturen' : 'Verwijder van toernooi'}
-                                                                    >
-                                                                        {removingParticipant === member.id ? (
-                                                                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                                            </svg>
-                                                                        ) : (
-                                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                            </svg>
-                                                                        )}
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => removeParticipant(member)}
+                                                    disabled={removingParticipant === member.id}
+                                                    className="text-red-600 hover:text-red-800 disabled:text-red-300 transition-colors"
+                                                    title={member.participant_status === 'invited' ? 'Afzeggen en afmeldmail versturen' : 'Verwijder van toernooi'}
+                                                >
+                                                    {removingParticipant === member.id ? (
+                                                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                    ) : (
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+
+                        const participantTable = (rows) => (
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse border border-slate-300">
+                                    <thead className="bg-slate-100">
+                                        <tr>
+                                            <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Licentie</th>
+                                            <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Naam</th>
+                                            <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Leeftijdscategorie</th>
+                                            <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Gewichtsklasse</th>
+                                            <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Email</th>
+                                            <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">Status</th>
+                                            <th className="border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700">Actie</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white">
+                                        {rows.map(renderMemberRow)}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+
+                        if (phase === 'voorbereiding') {
+                            // Één lijst met alle deelnemers
+                            return (
+                                <div>
+                                    <div className="text-sm text-slate-600 mb-3">
+                                        <strong>{eligibleMembers.length}</strong> deelnemer{eligibleMembers.length !== 1 ? 's' : ''}
+                                    </div>
+                                    {eligibleMembers.length > 0 ? (
+                                        participantTable(eligibleMembers)
+                                    ) : (
+                                        <div className="text-sm text-slate-500 italic py-4 text-center">
+                                            Geen deelnemers toegevoegd
+                                        </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="text-sm text-slate-500 italic py-4 text-center">
-                                    Geen leden gevonden die voldoen aan de leeftijdscriteria
+                            );
+                        }
+
+                        // Gesplitste weergave vanaf 'inschrijvingen_uitvoeren'
+                        return (
+                            <div>
+                                {/* Bevestigde deelnemers */}
+                                <div className="text-sm text-slate-600 mb-3">
+                                    <strong>{acceptedParticipants.length}</strong> bevestigde deelnemer{acceptedParticipants.length !== 1 ? 's' : ''}
                                 </div>
-                            )}
-                        </div>
-                    )}
+
+                                {acceptedParticipants.length > 0 ? (
+                                    <div className="mb-4">
+                                        {participantTable(acceptedParticipants)}
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-slate-500 italic py-4 text-center mb-4">
+                                        Geen bevestigde deelnemers
+                                    </div>
+                                )}
+
+                                {/* Overige deelnemers (inklapbaar) */}
+                                {nonAcceptedParticipants.length > 0 && (
+                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                        <button
+                                            onClick={() => setExpandedNonAccepted(v => !v)}
+                                            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-medium text-slate-700"
+                                        >
+                                            <span>Overige deelnemers ({nonAcceptedParticipants.length})</span>
+                                            <svg
+                                                className={`w-4 h-4 transition-transform ${expandedNonAccepted ? 'rotate-180' : ''}`}
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        {expandedNonAccepted && (
+                                            <div className="p-3">
+                                                {participantTable(nonAcceptedParticipants)}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {!membersLoaded && (
                         <div className="text-sm text-slate-500 text-center py-4">

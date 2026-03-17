@@ -168,33 +168,30 @@ class TournamentController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'address' => 'required|string',
-            'flyer' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // max 5MB
+            'flyer' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'date' => 'required|date',
             'age_category_ids' => 'required|array|min:1',
             'age_category_ids.*' => 'required|exists:lookups,id',
             'description' => 'nullable|string',
             'active' => 'boolean',
+            'phase' => 'nullable|in:voorbereiding,inschrijvingen_uitvoeren,afgelopen',
+            'invitation_deadline' => 'nullable|date',
         ]);
 
         // Handle flyer upload
-        $flyerPath = $tournament->flyer; // behoud huidige flyer
+        $flyerPath = $tournament->flyer;
         if ($request->hasFile('flyer')) {
-            // Verwijder oude flyer als er een nieuwe wordt geüpload
             if ($tournament->flyer && \Storage::disk('public')->exists($tournament->flyer)) {
                 \Storage::disk('public')->delete($tournament->flyer);
             }
             $flyerPath = $request->file('flyer')->store('tournament-flyers', 'public');
         }
 
-        // Update tournament zonder age_category_ids en flyer file
         $tournamentData = collect($validated)->except(['age_category_ids', 'flyer'])->toArray();
         $tournamentData['flyer'] = $flyerPath;
         $tournament->update($tournamentData);
 
-        // Sync de age categories via pivot table
         $tournament->ageCategories()->sync($validated['age_category_ids']);
-
-        // Laad de age categories voor de response
         $tournament->load('ageCategories');
 
         return response()->json($tournament);
@@ -387,13 +384,33 @@ class TournamentController extends Controller
             ]);
         }
 
+        // Check if tournament phase allows acceptance
+        $tournament = $participant->tournament;
+        if ($tournament->phase !== 'voorbereiding') {
+            return view('invitation-response', [
+                'status' => 'error',
+                'message' => 'De inschrijvingsperiode voor dit toernooi is gesloten.',
+                'tournament' => $tournament
+            ]);
+        }
+
+        // Check if invitation deadline has passed
+        if ($tournament->invitation_deadline && Carbon::today()->gt(Carbon::parse($tournament->invitation_deadline))) {
+            return view('invitation-response', [
+                'status' => 'error',
+                'message' => 'De deadline voor het accepteren van uitnodigingen (' . Carbon::parse($tournament->invitation_deadline)->format('d-m-Y') . ') is verstreken.',
+                'tournament' => $tournament
+            ]);
+        }
+
         $participant->update([
-            'response_status' => 'accepted'
+            'response_status' => 'accepted',
+            'status' => 'accepted'
         ]);
 
         return view('invitation-response', [
             'status' => 'accepted',
-            'tournament' => $participant->tournament
+            'tournament' => $tournament
         ]);
     }
 
@@ -422,13 +439,24 @@ class TournamentController extends Controller
             ]);
         }
 
+        // Check if tournament phase allows declining
+        $tournament = $participant->tournament;
+        if ($tournament->phase !== 'voorbereiding') {
+            return view('invitation-response', [
+                'status' => 'error',
+                'message' => 'De inschrijvingsperiode voor dit toernooi is gesloten.',
+                'tournament' => $tournament
+            ]);
+        }
+
         $participant->update([
-            'response_status' => 'declined'
+            'response_status' => 'declined',
+            'status' => 'declined'
         ]);
 
         return view('invitation-response', [
             'status' => 'declined',
-            'tournament' => $participant->tournament
+            'tournament' => $tournament
         ]);
     }
 
@@ -438,6 +466,10 @@ class TournamentController extends Controller
      */
     public function removeParticipant(Tournament $tournament, Member $member)
     {
+        if ($tournament->phase !== 'voorbereiding') {
+            return response()->json(['message' => 'Deelnemers kunnen niet worden verwijderd in de huidige fase.'], 403);
+        }
+
         // Find the participant
         $participant = TournamentParticipant::where('tournament_id', $tournament->id)
             ->where('member_id', $member->id)
@@ -533,6 +565,10 @@ class TournamentController extends Controller
      */
     public function addParticipant(Tournament $tournament, Request $request)
     {
+        if ($tournament->phase !== 'voorbereiding') {
+            return response()->json(['message' => 'Deelnemers kunnen niet worden toegevoegd in de huidige fase.'], 403);
+        }
+
         $request->validate([
             'member_id' => 'required|exists:members,id'
         ]);

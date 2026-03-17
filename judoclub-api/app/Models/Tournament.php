@@ -13,10 +13,13 @@ class Tournament extends Model
         'date',
         'description',
         'active',
+        'phase',
+        'invitation_deadline',
     ];
 
     protected $casts = [
         'date' => 'date:Y-m-d',
+        'invitation_deadline' => 'date:Y-m-d',
         'active' => 'boolean',
     ];
 

@@ -102,6 +102,16 @@
 
         <p>Op basis van jouw profiel ben je geschikt voor dit toernooi.</p>
 
+        @if($tournament->invitation_deadline)
+            <div
+                style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px 16px; margin: 16px 0; text-align: center;">
+                <p style="margin: 0; color: #92400e; font-weight: bold;">
+                    ⏰ Gelieve te antwoorden voor
+                    <strong>{{ \Carbon\Carbon::parse($tournament->invitation_deadline)->format('d-m-Y') }}</strong>
+                </p>
+            </div>
+        @endif
+
         <p style="font-weight: bold; text-align: center; color: #2563eb; margin: 20px 0;">
             Wil je aan dit toernooi deelnemen?
         </p>
