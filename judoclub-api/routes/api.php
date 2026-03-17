@@ -34,6 +34,72 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('members', MemberController::class);
     Route::apiResource('lookups', LookupController::class)->except(['show']);
+    
+    // Age category bulk update
+    Route::post('/members/update-age-categories', function (Request $request) {
+        $request->validate([
+            'dry_run' => ['sometimes', 'boolean'],
+            'year' => ['sometimes', 'integer', 'min:1900', 'max:2100'],
+        ]);
+
+        $dryRun = $request->boolean('dry_run', false);
+        $year = $request->input('year', date('Y'));
+
+        try {
+            // Run the Artisan command and capture output
+            $command = 'members:update-age-categories';
+            if ($dryRun) {
+                $command .= ' --dry-run';
+            }
+            if ($request->has('year')) {
+                $command .= " --year={$year}";
+            }
+
+            \Illuminate\Support\Facades\Artisan::call($command);
+            $output = \Illuminate\Support\Facades\Artisan::output();
+
+            // Parse the output to extract summary information
+            $lines = explode("\n", $output);
+            $summary = [];
+            $changes = [];
+
+            $capturing = false;
+            foreach ($lines as $line) {
+                if (strpos($line, 'Samenvatting') !== false) {
+                    $capturing = true;
+                    continue;
+                }
+                if ($capturing && trim($line)) {
+                    if (strpos($line, ':') !== false) {
+                        $summary[] = trim($line);
+                    }
+                }
+                // Capture individual member changes
+                if (preg_match('/^(.+?) \(geboren \d+, wordt \d+ op .+?\): (.+?) → (.+?)$/', trim($line), $matches)) {
+                    $changes[] = [
+                        'member' => $matches[1],
+                        'from' => $matches[2] === '(geen)' ? null : $matches[2],
+                        'to' => $matches[3],
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'dry_run' => $dryRun,
+                'year' => $year,
+                'summary' => $summary,
+                'changes' => $changes,
+                'full_output' => $output,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Er is een fout opgetreden: ' . $e->getMessage(),
+            ], 500);
+        }
+    });
 });
 
 Route::post('/login', function (Request $request) {

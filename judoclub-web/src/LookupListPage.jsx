@@ -230,7 +230,7 @@ export default function LookupListPage() {
                 </div>
             )}
 
-            <form onSubmit={addItem} className="grid gap-3 items-end mb-6" style={{gridTemplateColumns: `repeat(${type === 'weight_categories' ? '5' : type === 'age_categories' ? '4' : '3'}, 1fr) auto`}}>
+            <form onSubmit={addItem} className="grid gap-3 items-end mb-6" style={{ gridTemplateColumns: `repeat(${type === 'weight_categories' ? '5' : type === 'age_categories' ? '4' : '3'}, 1fr) auto` }}>
                 <div>
                     <label className="block text-sm font-medium text-slate-700">Waarde</label>
                     <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nieuwe waarde..." />
@@ -261,12 +261,12 @@ export default function LookupListPage() {
                 {type === "age_categories" && (
                     <div>
                         <label className="block text-sm font-medium text-slate-700">Min. Leeftijd</label>
-                        <Input 
-                            type="number" 
-                            value={minAge} 
-                            onChange={(e) => setMinAge(e.target.value)} 
-                            placeholder="0" 
-                            min="0" 
+                        <Input
+                            type="number"
+                            value={minAge}
+                            onChange={(e) => setMinAge(e.target.value)}
+                            placeholder="0"
+                            min="0"
                             max="100"
                         />
                     </div>
@@ -353,7 +353,7 @@ export default function LookupListPage() {
                                                         }}
                                                     />
                                                 ) : (
-                                                    <span 
+                                                    <span
                                                         className="cursor-pointer hover:bg-slate-100 px-1 py-1 rounded"
                                                         onClick={() => setEditingId(it.id)}
                                                         title="Klik om te bewerken"

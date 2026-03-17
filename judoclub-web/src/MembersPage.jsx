@@ -20,6 +20,10 @@ export default function MembersPage() {
     // Gender metadata voor labels
     const [genderMeta, setGenderMeta] = useState(null);
 
+    // Age category update
+    const [updatingAgeCategories, setUpdatingAgeCategories] = useState(false);
+    const [updateResults, setUpdateResults] = useState(null);
+
     // Helper functie voor gender labels
     const genderLabel = (v) => genderMeta?.labels?.[v] ?? v;
 
@@ -99,6 +103,38 @@ export default function MembersPage() {
         load();
     }
 
+    async function updateAgeCategories(dryRun = false) {
+        setUpdatingAgeCategories(true);
+        setErr("");
+        setUpdateResults(null);
+
+        try {
+            const res = await api.post(
+                "/api/members/update-age-categories",
+                {
+                    dry_run: dryRun,
+                    year: new Date().getFullYear(),
+                },
+                { headers: { Accept: "application/json" } }
+            );
+
+            if (res.data.success) {
+                setUpdateResults(res.data);
+                if (!dryRun) {
+                    // Refresh de ledenlijst na echte update
+                    await load();
+                }
+            } else {
+                setErr(res.data.message || "Er is een onbekende fout opgetreden.");
+            }
+        } catch (e) {
+            console.error("Age category update error:", e);
+            setErr(e?.response?.data?.message || `Update mislukt (${e?.response?.status ?? "geen status"})`);
+        } finally {
+            setUpdatingAgeCategories(false);
+        }
+    }
+
     return (
         <AppLayout
             title="Leden"
@@ -107,6 +143,19 @@ export default function MembersPage() {
                 <>
                     <Button variant="primary" onClick={onRefresh} disabled={loading}>
                         {loading ? "Laden..." : "Refresh"}
+                    </Button>
+                    <Button 
+                        variant="danger" 
+                        onClick={() => {
+                            const ok = window.confirm(
+                                "Weet je zeker dat je alle leeftijdscategorieën wilt bijwerken? Dit kan niet ongedaan worden gemaakt."
+                            );
+                            if (ok) updateAgeCategories(false);
+                        }}
+                        disabled={loading || updatingAgeCategories}
+                        title="Werk alle leeftijdscategorieën bij op basis van leeftijd op 1 januari"
+                    >
+                        {updatingAgeCategories ? "Bezig..." : "Update Leeftijdscategorieën"}
                     </Button>
                     <Link to="/members/new">
                         <Button variant="blue">+ Nieuw lid</Button>
@@ -153,6 +202,46 @@ export default function MembersPage() {
             {err && (
                 <div className="mb-4">
                     <Alert variant="error">{err}</Alert>
+                </div>
+            )}
+
+            {updateResults && (
+                <div className="mb-4">
+                    <Alert variant={updateResults.dry_run ? "info" : "success"}>
+                        <div className="font-medium mb-2">
+                            {updateResults.dry_run ? "Preview Resultaat:" : "Update Voltooid!"}
+                        </div>
+                        {updateResults.summary.map((line, i) => (
+                            <div key={i} className="text-sm">{line}</div>
+                        ))}
+                        
+                        {updateResults.changes.length > 0 && (
+                            <details className="mt-3">
+                                <summary className="cursor-pointer text-sm font-medium">
+                                    Toon {updateResults.changes.length} wijzigingen
+                                </summary>
+                                <div className="mt-2 max-h-40 overflow-y-auto text-xs space-y-1">
+                                    {updateResults.changes.slice(0, 20).map((change, i) => (
+                                        <div key={i}>
+                                            <strong>{change.member}:</strong> {change.from || "(geen)"} → {change.to}
+                                        </div>
+                                    ))}
+                                    {updateResults.changes.length > 20 && (
+                                        <div className="text-slate-500 italic">
+                                            ... en {updateResults.changes.length - 20} meer
+                                        </div>
+                                    )}
+                                </div>
+                            </details>
+                        )}
+                        
+                        <button 
+                            onClick={() => setUpdateResults(null)}
+                            className="mt-3 text-slate-600 hover:text-slate-900 text-sm underline"
+                        >
+                            Sluiten
+                        </button>
+                    </Alert>
                 </div>
             )}
 

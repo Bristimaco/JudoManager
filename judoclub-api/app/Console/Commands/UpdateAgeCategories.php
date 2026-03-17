@@ -27,9 +27,9 @@ class UpdateAgeCategories extends Command
     public function handle()
     {
         $this->info('=== Huidige leeftijdscategorieën ===');
-        
+
         $ageCategories = Lookup::where('type', 'age_categories')->orderBy('id')->get();
-        
+
         if ($ageCategories->isEmpty()) {
             $this->warn('Geen leeftijdscategorieën gevonden.');
             return 0;
@@ -37,7 +37,7 @@ class UpdateAgeCategories extends Command
 
         $headers = ['ID', 'Label', 'Min Age'];
         $rows = [];
-        
+
         foreach ($ageCategories as $cat) {
             $rows[] = [
                 $cat->id,
@@ -45,7 +45,7 @@ class UpdateAgeCategories extends Command
                 $cat->min_age ?? 'NULL'
             ];
         }
-        
+
         $this->table($headers, $rows);
 
         if ($this->option('update')) {
@@ -83,7 +83,7 @@ class UpdateAgeCategories extends Command
             }
 
             $currentAge = $cat->min_age ?? 'NULL';
-            
+
             if ($defaultAge !== null) {
                 $suggested = $defaultAge;
                 $message = "Voor '{$cat->label}' (huidig: {$currentAge}) -> voorstel: {$suggested}";
@@ -93,9 +93,9 @@ class UpdateAgeCategories extends Command
             }
 
             $this->line($message);
-            
+
             $newAge = $this->ask("Nieuwe minimum leeftijd voor '{$cat->label}'", $suggested);
-            
+
             if (is_numeric($newAge) && $newAge >= 0) {
                 $cat->min_age = (int) $newAge;
                 $cat->save();
