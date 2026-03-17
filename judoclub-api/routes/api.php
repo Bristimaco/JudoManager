@@ -43,6 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Tournament invitation emails
     Route::post('/tournaments/{tournament}/send-invitations', [TournamentController::class, 'sendInvitations']);
 
+    // Tournament participant management
+    Route::delete('/tournaments/{tournament}/participants/{member}', [TournamentController::class, 'removeParticipant']);
+    Route::post('/tournaments/{tournament}/participants/{member}/send-invitation', [TournamentController::class, 'sendInvitationToMember']);
+    Route::post('/tournaments/{tournament}/participants', [TournamentController::class, 'addParticipant']);
+    Route::get('/tournaments/{tournament}/available-members', [TournamentController::class, 'availableMembers']);
+
     // Age category bulk update
     Route::post('/members/update-age-categories', function (Request $request) {
         $request->validate([
