@@ -217,39 +217,15 @@ export default function MemberDetailPage() {
     setError("");
 
     try {
-      // Als het lid nog actief is (lokaal), eerst op inactief zetten
-      if (active) {
-        console.log("Lid is nog actief, zet eerst op inactief...");
-        await api.put(
-          `/api/members/${id}`,
-          {
-            license_number: licenseNumber,
-            first_name: firstName,
-            last_name: lastName,
-            birthdate: birthdate || null,
-            belt: belt || null,
-            active: false, // Zet op inactief
-            age_category: ageCategory || null,
-            gender: gender || null,
-            weight_category: gender ? weightCategory || null : null,
-          },
-          { headers: { Accept: "application/json" } }
-        );
-
-        // Update lokale state
-        setActive(false);
-      }
-
-      // Nu het lid verwijderen
       await api.delete(`/api/members/${id}`, { headers: { Accept: "application/json" } });
       nav("/members");
     } catch (e) {
       const status = e?.response?.status;
       const data = e?.response?.data;
-
-      // Specifieke handling voor actieve leden (als het alsnog faalt)
+      
+      // Specifieke handling voor actieve leden
       if (status === 422 && data?.error === 'active_member_cannot_be_deleted') {
-        setError(data.message || "Dit lid is nog actief. Er is iets misgegaan bij het inactief maken.");
+        setError(data.message || "Dit lid is nog actief. Zet het lid eerst op inactief voordat je het verwijdert.");
       } else {
         setError(`Verwijderen mislukt (${status ?? e?.message ?? "no status"})`);
       }
@@ -304,6 +280,7 @@ export default function MemberDetailPage() {
           </div>
         </div>
 
+        {/* Geboortedatum + Leeftijdscategorie (2 kolommen) */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Geboortedatum</label>
@@ -319,10 +296,10 @@ export default function MemberDetailPage() {
           <div>
             <label className="block text-sm font-medium text-slate-700">Leeftijdscategorie</label>
             <Select value={ageCategory} onChange={(e) => setAgeCategory(e.target.value)} disabled={ageLoading}>
-              <option value="">{ageLoading ? "Leeftijdscategorieën laden..." : "— Geen / kies —"}</option>
-              {ageCategories.map((c) => (
-                <option key={c.id} value={c.label}>
-                  {c.label}
+              <option value="">-- Kies leeftijdscategorie --</option>
+              {ageCategories.map((cat) => (
+                <option key={cat.id} value={cat.label}>
+                  {cat.label}
                 </option>
               ))}
             </Select>
@@ -333,11 +310,11 @@ export default function MemberDetailPage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">Geslacht</label>
-            <Select value={gender ?? ""} onChange={(e) => setGender(e.target.value)} disabled={genderMetaLoading || !genderMeta}>
-              <option value="">{genderMetaLoading ? "Geslachten laden..." : "— Geen / kies —"}</option>
-              {(genderMeta?.values ?? []).map((v) => (
-                <option key={v} value={v}>
-                  {genderLabel(v)}
+            <Select value={gender} onChange={(e) => setGender(e.target.value)} disabled={genderMetaLoading}>
+              <option value="">-- Kies geslacht --</option>
+              {genderMeta?.values?.map((g) => (
+                <option key={g} value={g}>
+                  {genderLabel(g)}
                 </option>
               ))}
             </Select>
@@ -345,54 +322,54 @@ export default function MemberDetailPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700">Gordel</label>
-            <Select value={belt ?? ""} onChange={(e) => setBelt(e.target.value)} disabled={beltsLoading}>
-              <option value="">{beltsLoading ? "Gordels laden..." : "— Geen / kies —"}</option>
-              {belts.map((b) => (
-                <option key={b.id} value={b.label}>
-                  {b.label}
-                </option>
-              ))}
-            </Select>
-            {fe("belt")}
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
             <label className="block text-sm font-medium text-slate-700">Gewichtscategorie</label>
-            <Select value={weightCategory} onChange={(e) => setWeightCategory(e.target.value)} disabled={!gender || weightLoading}>
-              <option value="">
-                {!gender ? "Kies eerst geslacht..." : weightLoading ? "Gewichtscategorieën laden..." : "— Geen / kies —"}
-              </option>
-              {weightCategories.map((c) => (
-                <option key={c.id} value={c.label}>
-                  {c.label}
+            <Select
+              value={weightCategory}
+              onChange={(e) => setWeightCategory(e.target.value)}
+              disabled={!gender || weightLoading}
+            >
+              <option value="">-- {!gender ? "Kies eerst geslacht" : "Kies gewichtscategorie"} --</option>
+              {weightCategories.map((cat) => (
+                <option key={cat.id} value={cat.label}>
+                  {cat.label}
                 </option>
               ))}
             </Select>
             {fe("weight_category")}
           </div>
-          <div />
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Gordel</label>
+            <Select value={belt} onChange={(e) => setBelt(e.target.value)} disabled={beltsLoading}>
+              <option value="">-- Kies gordel --</option>
+              {belts.map((belt) => (
+                <option key={belt.id} value={belt.label}>
+                  {belt.label}
+                </option>
+              ))}
+            </Select>
+            {fe("belt")}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700">Licentienummer</label>
             <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} />
             {fe("license_number")}
           </div>
-          <div>
-            <label className="flex items-center gap-3 select-none">
-              <input
-                type="checkbox"
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
-              />
-              <span className="text-sm text-slate-700">Actief lid</span>
-            </label>
-          </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-3 select-none">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+            />
+            <span className="text-sm text-slate-700">Actief lid</span>
+          </label>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -404,11 +381,11 @@ export default function MemberDetailPage() {
             variant="danger"
             type="button"
             onClick={onDelete}
-            disabled={deleting}
+            disabled={deleting || active}
             className="sm:ml-auto"
-            title="Verwijder dit lid"
+            title={active ? "Zet het lid eerst op inactief om het te kunnen verwijderen" : "Verwijder dit lid"}
           >
-            {deleting ? "Verwijderen..." : "Verwijder"}
+            {deleting ? "Verwijderen..." : active ? "Verwijderen (eerst inactief maken)" : "Verwijder"}
           </Button>
         </div>
       </form>
