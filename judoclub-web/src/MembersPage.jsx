@@ -157,9 +157,6 @@ export default function MembersPage() {
                     >
                         {updatingAgeCategories ? "Bezig..." : "Update Leeftijdscategorieën"}
                     </Button>
-                    <Link to="/members/new">
-                        <Button variant="blue">+ Nieuw lid</Button>
-                    </Link>
                 </>
             }
         >

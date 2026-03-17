@@ -43,6 +43,44 @@ export default function MemberCreatePage() {
     return Array.isArray(d) ? d : (d?.data ?? []);
   }
 
+  // Bereken de juiste leeftijdscategorie op basis van geboortedatum
+  function calculateAgeCategory(birthdateISO, availableCategories) {
+    if (!birthdateISO || !availableCategories.length) return null;
+
+    try {
+      // Parse birthdate (yyyy-mm-dd)
+      const birthdate = new Date(birthdateISO + 'T00:00:00');
+      if (isNaN(birthdate)) return null;
+
+      // Bereken de leeftijd die iemand WORDT in het huidige jaar (op zijn verjaardag)
+      const currentYear = new Date().getFullYear();
+      const birthdayThisYear = new Date(currentYear, birthdate.getMonth(), birthdate.getDate());
+      const ageInYear = currentYear - birthdate.getFullYear();
+
+      // Filter en sorteer categorieën (hoogste min_age eerst voor correcte matching)
+      const sortedCategories = availableCategories
+        .filter(cat => cat.min_age != null)
+        .sort((a, b) => b.min_age - a.min_age);
+
+      // Zoek de categorie met de hoogste min_age die nog steeds <= ageInYear is
+      for (const category of sortedCategories) {
+        if (category.min_age <= ageInYear) {
+          return category.label;
+        }
+      }
+
+      // Geen geschikte categorie gevonden, neem de categorie met de laagste min_age
+      const lowestCategory = availableCategories
+        .filter(cat => cat.min_age != null)
+        .sort((a, b) => a.min_age - b.min_age)[0];
+      
+      return lowestCategory?.label || null;
+    } catch (e) {
+      console.error('Error calculating age category:', e);
+      return null;
+    }
+  }
+
   useEffect(() => {
     loadMeta();
     loadBelts();
@@ -56,6 +94,16 @@ export default function MemberCreatePage() {
     loadWeightCategories(gender);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gender]);
+
+  // Automatisch leeftijdscategorie bepalen op basis van geboortedatum
+  useEffect(() => {
+    if (birthdate && ageCategories.length > 0) {
+      const calculatedCategory = calculateAgeCategory(birthdate, ageCategories);
+      if (calculatedCategory) {
+        setAgeCategory(calculatedCategory);
+      }
+    }
+  }, [birthdate, ageCategories]);
 
   async function loadMeta() {
     setGenderMetaLoading(true);
