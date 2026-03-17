@@ -115,6 +115,10 @@ export default function TournamentDetailPage() {
     const [membersError, setMembersError] = useState("");
     const [expandedMembers, setExpandedMembers] = useState(false);
 
+    // Email invitation state
+    const [sendingInvitations, setSendingInvitations] = useState(false);
+    const [invitationResult, setInvitationResult] = useState(null);
+
     // Helper: ondersteunt zowel array response als paginator {data, meta, links}
     function pluckData(res) {
         if (!res) return [];
@@ -149,6 +153,36 @@ export default function TournamentDetailPage() {
             setMembersError(`Leden ophalen mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         } finally {
             setFetchingMembers(false);
+        }
+    }
+
+    async function sendInvitations() {
+        setSendingInvitations(true);
+        setInvitationResult(null);
+
+        try {
+            const res = await api.post(`/api/tournaments/${id}/send-invitations`, {}, {
+                headers: { Accept: "application/json" }
+            });
+
+            setInvitationResult({
+                type: 'success',
+                message: res.data.message,
+                invitedCount: res.data.invited_count,
+                errors: res.data.errors || []
+            });
+
+            // Refresh the eligible members to see updated statuses
+            if (membersLoaded) {
+                await fetchEligibleMembers();
+            }
+        } catch (e) {
+            setInvitationResult({
+                type: 'error',
+                message: `Uitnodigingen versturen mislukt (${e?.response?.status ?? e?.message ?? "no status"})`
+            });
+        } finally {
+            setSendingInvitations(false);
         }
     }
 
@@ -195,9 +229,17 @@ export default function TournamentDetailPage() {
         }
     }
 
+    // Automatisch eligible members ophalen na het laden van tournament data
+    async function loadTournamentData() {
+        await load();
+        if (id) {
+            fetchEligibleMembers(); // Niet await, zodat het parallel loopt
+        }
+    }
+
     useEffect(() => {
         loadAgeCategories();
-        load();
+        loadTournamentData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
@@ -534,14 +576,43 @@ export default function TournamentDetailPage() {
                                 onClick={fetchEligibleMembers}
                                 disabled={fetchingMembers}
                             >
-                                {fetchingMembers ? "Ophalen..." : "Haal leden op"}
+                                {fetchingMembers ? "Verversen..." : "Ververs leden"}
                             </Button>
+
+                            {membersLoaded && eligibleMembers.length > 0 && (
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={sendInvitations}
+                                    disabled={sendingInvitations}
+                                >
+                                    {sendingInvitations ? "Verzenden..." : "Verstuur uitnodigingen"}
+                                </Button>
+                            )}
+
                             {fetchingMembers && <span className="text-sm text-slate-600">Leden ophalen...</span>}
                         </div>
 
                         {membersError && (
                             <div className="text-sm text-red-600 mb-3 p-3 bg-red-50 rounded-lg">
                                 {membersError}
+                            </div>
+                        )}
+
+                        {invitationResult && (
+                            <div className={`text-sm mb-3 p-3 rounded-lg ${invitationResult.type === 'success' ? 'text-green-800 bg-green-50' : 'text-red-800 bg-red-50'
+                                }`}>
+                                <div className="font-medium">{invitationResult.message}</div>
+                                {invitationResult.errors && invitationResult.errors.length > 0 && (
+                                    <div className="mt-2 text-xs">
+                                        <div className="font-medium">Problemen:</div>
+                                        <ul className="list-disc list-inside">
+                                            {invitationResult.errors.map((error, index) => (
+                                                <li key={index}>{error}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -568,6 +639,12 @@ export default function TournamentDetailPage() {
                                                     <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
                                                         Gewichtsklasse
                                                     </th>
+                                                    <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
+                                                        Email
+                                                    </th>
+                                                    <th className="border border-slate-300 px-3 py-2 text-left text-xs font-semibold text-slate-700">
+                                                        Status
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white">
@@ -585,6 +662,25 @@ export default function TournamentDetailPage() {
                                                         <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
                                                             {member.weight_category || '-'}
                                                         </td>
+                                                        <td className="border border-slate-300 px-3 py-2 text-sm text-slate-800">
+                                                            {member.email || '-'}
+                                                        </td>
+                                                        <td className="border border-slate-300 px-3 py-2 text-sm">
+                                                            <Badge
+                                                                tone={member.participant_status === 'invited' ? 'success' :
+                                                                    member.participant_status === 'eligible' ? 'neutral' : 'info'}
+                                                                size="sm"
+                                                            >
+                                                                {member.participant_status === 'eligible' ? 'Kan uitgenodigd worden' :
+                                                                    member.participant_status === 'invited' ? 'Uitgenodigd' :
+                                                                        member.participant_status}
+                                                            </Badge>
+                                                            {member.invited_at && (
+                                                                <div className="text-xs text-slate-500 mt-1">
+                                                                    {new Date(member.invited_at).toLocaleDateString('nl-NL')}
+                                                                </div>
+                                                            )}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -600,7 +696,7 @@ export default function TournamentDetailPage() {
 
                         {!membersLoaded && (
                             <div className="text-sm text-slate-500 text-center py-4">
-                                Klik op "Haal leden op" om deelnemers te zien
+                                {fetchingMembers ? "Leden worden opgehaald..." : "Leden laden..."}
                             </div>
                         )}
                     </div>

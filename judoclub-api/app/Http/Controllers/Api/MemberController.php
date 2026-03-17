@@ -34,6 +34,7 @@ class MemberController extends Controller
     {
         $data = $request->validate([
             'license_number' => ['required', 'numeric', 'min:1', Rule::unique('members', 'license_number')],
+            'email' => ['nullable', 'email', 'max:255'],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'birthdate' => ['nullable', 'date'],
@@ -62,6 +63,7 @@ class MemberController extends Controller
     {
         $data = $request->validate([
             'license_number' => ['required', 'numeric', 'min:1', Rule::unique('members', 'license_number')->ignore($member->id)],
+            'email' => ['nullable', 'email', 'max:255'],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'birthdate' => ['nullable', 'date'],

@@ -12,6 +12,7 @@ export default function MemberCreatePage() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [gender, setGender] = useState("");
   const [birthdate, setBirthdate] = useState(""); // ISO yyyy-mm-dd of ""
   const [belt, setBelt] = useState("");
@@ -227,6 +228,7 @@ export default function MemberCreatePage() {
         "/api/members",
         {
           license_number: licenseNumber,
+          email: email || null,
           first_name: firstName,
           last_name: lastName,
           birthdate: birthdate || null, // ✅ rechtstreeks uit datepicker
@@ -411,6 +413,19 @@ export default function MemberCreatePage() {
             <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} />
             {fe("license_number")}
           </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Email</label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="voorbeeld@email.com"
+            />
+            {fe("email")}
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="flex items-center gap-3 select-none">
               <input

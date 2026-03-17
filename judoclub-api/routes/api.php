@@ -40,6 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Tournament eligible members
     Route::get('/tournaments/{tournament}/eligible-members', [TournamentController::class, 'eligibleMembers']);
 
+    // Tournament invitation emails
+    Route::post('/tournaments/{tournament}/send-invitations', [TournamentController::class, 'sendInvitations']);
+
     // Age category bulk update
     Route::post('/members/update-age-categories', function (Request $request) {
         $request->validate([

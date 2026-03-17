@@ -8,6 +8,7 @@ class Member extends Model
 {
     protected $fillable = [
         'license_number',
+        'email',
         'first_name',
         'last_name',
         'birthdate',

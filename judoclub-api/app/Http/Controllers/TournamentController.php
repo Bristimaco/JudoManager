@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Tournament;
 use App\Models\Member;
 use App\Models\Lookup;
+use App\Models\TournamentParticipant;
+use App\Mail\TournamentInvitation;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
 class TournamentController extends Controller
@@ -153,6 +156,7 @@ class TournamentController extends Controller
 
     /**
      * Get eligible members for a tournament based on age categories on tournament date.
+     * Saves eligible members as participants and returns them.
      */
     public function eligibleMembers(Tournament $tournament)
     {
@@ -170,7 +174,7 @@ class TournamentController extends Controller
             ->where('interested_in_competition', true)
             ->get();
 
-        $eligibleMembers = [];
+        $eligibleMemberIds = [];
 
         foreach ($members as $member) {
             if (!$member->birthdate)
@@ -190,11 +194,43 @@ class TournamentController extends Controller
             $isEligible = $tournament->ageCategories->contains('id', $memberAgeCategory->id);
 
             if ($isEligible) {
-                $memberData = $member->toArray();
-                $memberData['age_on_tournament'] = $ageOnTournamentYear;
-                $memberData['calculated_age_category'] = $memberAgeCategory->label;
-                $eligibleMembers[] = $memberData;
+                $eligibleMemberIds[] = $member->id;
             }
+        }
+
+        // Verwijder bestaande participants voor dit toernooi
+        TournamentParticipant::where('tournament_id', $tournament->id)->delete();
+
+        // Maak nieuwe participants aan
+        foreach ($eligibleMemberIds as $memberId) {
+            TournamentParticipant::create([
+                'tournament_id' => $tournament->id,
+                'member_id' => $memberId,
+                'status' => 'eligible'
+            ]);
+        }
+
+        // Haal participants op met member data
+        $participants = TournamentParticipant::with('member')
+            ->where('tournament_id', $tournament->id)
+            ->get();
+
+        $eligibleMembers = [];
+        foreach ($participants as $participant) {
+            $member = $participant->member;
+            if (!$member->birthdate)
+                continue;
+
+            $birthYear = Carbon::parse($member->birthdate)->year;
+            $ageOnTournamentYear = $tournamentYear - $birthYear;
+            $memberAgeCategory = $this->determineAgeCategory($ageOnTournamentYear);
+
+            $memberData = $member->toArray();
+            $memberData['age_on_tournament'] = $ageOnTournamentYear;
+            $memberData['calculated_age_category'] = $memberAgeCategory->label ?? '';
+            $memberData['participant_status'] = $participant->status;
+            $memberData['invited_at'] = $participant->invited_at;
+            $eligibleMembers[] = $memberData;
         }
 
         // Sorteer op achternaam, dan voornaam
@@ -248,5 +284,51 @@ class TournamentController extends Controller
         $tournament->delete();
 
         return response()->json(['message' => 'Tournament deleted successfully']);
+    }
+
+    /**
+     * Send invitation emails to tournament participants
+     */
+    public function sendInvitations(Tournament $tournament)
+    {
+        // Get all eligible participants who haven't been invited yet
+        $participants = TournamentParticipant::where('tournament_id', $tournament->id)
+            ->where('status', 'eligible')
+            ->with('member')
+            ->get();
+
+        $invitedCount = 0;
+        $errors = [];
+
+        foreach ($participants as $participant) {
+            $member = $participant->member;
+
+            // Check if member has email
+            if (!$member->email) {
+                $errors[] = "Geen email adres voor {$member->first_name} {$member->last_name}";
+                continue;
+            }
+
+            try {
+                // Send email
+                Mail::to($member->email)->send(new TournamentInvitation($tournament, $member));
+
+                // Update participant status
+                $participant->update([
+                    'status' => 'invited',
+                    'invited_at' => now()
+                ]);
+
+                $invitedCount++;
+            } catch (\Exception $e) {
+                $errors[] = "Email verzenden mislukt voor {$member->first_name} {$member->last_name}: {$e->getMessage()}";
+            }
+        }
+
+        return response()->json([
+            'message' => "Uitnodigingen verzonden naar {$invitedCount} deelnemers",
+            'invited_count' => $invitedCount,
+            'errors' => $errors
+        ]);
     }
 }

@@ -48,4 +48,10 @@ class Tournament extends Model
             'lookup_id'
         )->where('type', 'age_categories');
     }
+
+    // Participants relatie
+    public function participants()
+    {
+        return $this->hasMany(TournamentParticipant::class);
+    }
 }

@@ -19,6 +19,7 @@ export default function MemberDetailPage() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [gender, setGender] = useState("");
   const [birthdate, setBirthdate] = useState(""); // ISO yyyy-mm-dd of ""
@@ -162,6 +163,7 @@ export default function MemberDetailPage() {
 
       setFirstName(m.first_name ?? "");
       setLastName(m.last_name ?? "");
+      setEmail(m.email ?? "");
       setLicenseNumber(m.license_number ?? "");
       setGender(m.gender ?? "");
       setBirthdate(m.birthdate ? String(m.birthdate).split("T")[0] : "");
@@ -217,6 +219,7 @@ export default function MemberDetailPage() {
           license_number: licenseNumber,
           first_name: firstName,
           last_name: lastName,
+          email: email,
           birthdate: birthdate || null,
           belt: belt || null,
           active,
@@ -316,6 +319,17 @@ export default function MemberDetailPage() {
             <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
             {fe("last_name")}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700">E-mailadres</label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="bijvoorbeeld: jan.janssen@email.com"
+          />
+          {fe("email")}
         </div>
 
         {/* Geboortedatum + Leeftijdscategorie (2 kolommen) */}
