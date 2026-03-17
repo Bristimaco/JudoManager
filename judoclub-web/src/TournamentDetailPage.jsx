@@ -502,17 +502,16 @@ export default function TournamentDetailPage() {
                 </div>
             </div>
 
-            {/* Geschikte Leden - Full Width Collapsible */}
+            {/* Deelnemers - Full Width Collapsible */}
             <div className="mt-6 border border-slate-200 rounded-xl bg-slate-50 overflow-hidden">
                 <button
                     onClick={() => setExpandedMembers(!expandedMembers)}
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-100 transition"
                 >
-                    <h3 className="text-base font-medium text-slate-800">Geschikte Leden</h3>
+                    <h3 className="text-base font-medium text-slate-800">Deelnemers</h3>
                     <svg
-                        className={`w-5 h-5 text-slate-600 transition-transform ${
-                            expandedMembers ? 'rotate-180' : ''
-                        }`}
+                        className={`w-5 h-5 text-slate-600 transition-transform ${expandedMembers ? 'rotate-180' : ''
+                            }`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -601,7 +600,7 @@ export default function TournamentDetailPage() {
 
                         {!membersLoaded && (
                             <div className="text-sm text-slate-500 text-center py-4">
-                                Klik op "Haal leden op" om geschikte leden te zien
+                                Klik op "Haal leden op" om deelnemers te zien
                             </div>
                         )}
                     </div>
