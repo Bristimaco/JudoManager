@@ -20,6 +20,43 @@ export default function MembersPage() {
     // Gender metadata voor labels
     const [genderMeta, setGenderMeta] = useState(null);
 
+    // Belt colors voor mapping belt naam -> kleur (consistent met LookupListPage)
+    const [beltColors, setBeltColors] = useState({});
+    
+    // Belt color definitions (consistent met LookupListPage)
+    const beltColorDefinitions = [
+        { name: 'wit', hex: '#FFFFFF', border: true },
+        { name: 'geel', hex: '#FFD700' },
+        { name: 'oranje', hex: '#FF8C00' },
+        { name: 'groen', hex: '#228B22' },
+        { name: 'blauw', hex: '#0000FF' },
+        { name: 'bruin', hex: '#8B4513' },
+        { name: 'zwart', hex: '#000000' }
+    ];
+    
+    // Helper functie voor belt colors
+    const getBeltColorData = (beltName) => {
+        if (!beltName) return null;
+        const colorName = beltColors[beltName];
+        return beltColorDefinitions.find(c => c.name === colorName);
+    };
+    
+    // Component voor belt color display
+    const BeltColorDisplay = ({ beltName }) => {
+        const colorData = getBeltColorData(beltName);
+        if (!colorData) {
+            return <span className="text-slate-500">{beltName || "-"}</span>;
+        }
+        
+        return (
+            <div 
+                className={`w-6 h-6 rounded border-2 border-gray-300 ${colorData.border ? 'shadow-inner' : ''}`}
+                style={{ backgroundColor: colorData.hex }}
+                title={`${beltName} (${colorData.name.charAt(0).toUpperCase() + colorData.name.slice(1)})`}
+            />
+        );
+    };
+
     // Age category update
     const [updatingAgeCategories, setUpdatingAgeCategories] = useState(false);
     const [updateResults, setUpdateResults] = useState(null);
@@ -37,6 +74,30 @@ export default function MembersPage() {
         } catch (e) {
             console.error("Failed to load gender meta", e);
             setGenderMeta(null);
+        }
+    }
+
+    // Load belt colors voor mapping
+    async function loadBeltColors() {
+        try {
+            const res = await api.get("/api/lookups", {
+                params: { type: "belts", per_page: 200 },
+                headers: { Accept: "application/json" },
+            });
+            
+            const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+            const colorMap = {};
+            
+            data.forEach(belt => {
+                if (belt.color) {
+                    colorMap[belt.label] = belt.color;
+                }
+            });
+            
+            setBeltColors(colorMap);
+        } catch (e) {
+            console.error("Failed to load belt colors", e);
+            setBeltColors({});
         }
     }
 
@@ -87,6 +148,7 @@ export default function MembersPage() {
     // Load gender metadata eenmalig
     useEffect(() => {
         loadGenderMeta();
+        loadBeltColors();
     }, []);
 
     function onSearch() {
@@ -293,7 +355,9 @@ export default function MembersPage() {
                                         </td>
                                         <td className="py-3 pr-4 text-slate-700">{genderLabel(m.gender)}</td>
                                         <td className="py-3 pr-4 text-slate-700">{formatDateBE(m.birthdate)}</td>
-                                        <td className="py-3 pr-4 text-slate-700">{m.belt ?? "-"}</td>
+                                        <td className="py-3 pr-4">
+                                            <BeltColorDisplay beltName={m.belt} />
+                                        </td>
                                         <td className="py-3 pr-4 text-slate-700">{m.age_category ?? "-"}</td>
                                         <td className="py-3 pr-4 text-slate-700">{m.weight_category ?? "-"}</td>
                                         <td className="py-3">

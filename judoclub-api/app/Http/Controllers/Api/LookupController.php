@@ -49,6 +49,7 @@ class LookupController extends Controller
             'label' => ['required', 'string', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'min_age' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'color' => ['nullable', 'string', Rule::in(['wit', 'geel', 'oranje', 'groen', 'blauw', 'bruin', 'zwart'])],
             'active' => ['sometimes', 'boolean'],
         ]);
 
@@ -62,6 +63,11 @@ class LookupController extends Controller
         // Forceer min_age = null behalve voor age_categories  
         if ($data['type'] !== 'age_categories') {
             $data['min_age'] = null;
+        }
+
+        // Forceer color = null behalve voor belts
+        if ($data['type'] !== 'belts') {
+            $data['color'] = null;
         }
 
         // Unique per type + gender(NULL-safe) + label
@@ -96,6 +102,7 @@ class LookupController extends Controller
             'label' => ['required', 'string', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'min_age' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'color' => ['nullable', 'string', Rule::in(['wit', 'geel', 'oranje', 'groen', 'blauw', 'bruin', 'zwart'])],
             'active' => ['sometimes', 'boolean'],
         ]);
 
@@ -109,6 +116,11 @@ class LookupController extends Controller
         // Forceer min_age = null behalve voor age_categories
         if ($lookup->type !== 'age_categories') {
             $data['min_age'] = null;
+        }
+
+        // Forceer color = null behalve voor belts
+        if ($lookup->type !== 'belts') {
+            $data['color'] = null;
         }
 
         // Unique per type + gender + label (excluding current)

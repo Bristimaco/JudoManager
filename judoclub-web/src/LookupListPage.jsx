@@ -20,6 +20,7 @@ export default function LookupListPage() {
     const [gender, setGender] = useState(""); // geen default hardcoded
     const [sortOrder, setSortOrder] = useState("0");
     const [minAge, setMinAge] = useState(""); // voor age categories
+    const [color, setColor] = useState(""); // voor belts
     const [active, setActive] = useState(true);
 
     const [genderMeta, setGenderMeta] = useState(null); // { values: [...], labels: {...} }
@@ -30,6 +31,20 @@ export default function LookupListPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
+
+    // Available belt colors with hex values
+    const beltColors = [
+        { name: 'wit', hex: '#FFFFFF', border: true },
+        { name: 'geel', hex: '#FFD700' },
+        { name: 'oranje', hex: '#FF8C00' },
+        { name: 'groen', hex: '#228B22' },
+        { name: 'blauw', hex: '#0000FF' },
+        { name: 'bruin', hex: '#8B4513' },
+        { name: 'zwart', hex: '#000000' }
+    ];
+    
+    // Find color object by name
+    const getColorByName = (colorName) => beltColors.find(c => c.name === colorName);
 
     // For inline editing
     const [editingId, setEditingId] = useState(null);
@@ -122,6 +137,7 @@ export default function LookupListPage() {
                     type,
                     ...(type === "weight_categories" ? { gender } : {}),
                     ...(type === "age_categories" && minAge ? { min_age: Number(minAge) } : {}),
+                    ...(type === "belts" && color ? { color } : {}),
                     label,
                     sort_order: Number(sortOrder || 0),
                     active,
@@ -132,6 +148,7 @@ export default function LookupListPage() {
             setLabel("");
             setSortOrder("0");
             setMinAge("");
+            setColor("");
             setActive(true);
 
             // reset gender terug naar eerste enum waarde (als weight)
@@ -156,6 +173,7 @@ export default function LookupListPage() {
                     label: item.label,
                     sort_order: item.sort_order,
                     ...(item.min_age !== undefined && item.min_age !== null ? { min_age: item.min_age } : {}),
+                    ...(item.color ? { color: item.color } : {}),
                     active: !item.active,
                     ...(type === "weight_categories" ? { gender: item.gender } : {}),
                 },
@@ -175,6 +193,28 @@ export default function LookupListPage() {
                     label: item.label,
                     sort_order: item.sort_order,
                     min_age: newMinAge ? Number(newMinAge) : null,
+                    ...(item.color ? { color: item.color } : {}),
+                    active: item.active,
+                    ...(type === "weight_categories" ? { gender: item.gender } : {}),
+                },
+                { headers: { Accept: "application/json" } }
+            );
+            setEditingId(null);
+            await load();
+        } catch (e) {
+            setErr(`Update mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
+        }
+    }
+
+    async function updateColor(item, newColor) {
+        try {
+            await api.put(
+                `/api/lookups/${item.id}`,
+                {
+                    label: item.label,
+                    sort_order: item.sort_order,
+                    ...(item.min_age !== undefined && item.min_age !== null ? { min_age: item.min_age } : {}),
+                    color: newColor || null,
                     active: item.active,
                     ...(type === "weight_categories" ? { gender: item.gender } : {}),
                 },
@@ -230,7 +270,7 @@ export default function LookupListPage() {
                 </div>
             )}
 
-            <form onSubmit={addItem} className="grid gap-3 items-end mb-6" style={{ gridTemplateColumns: `repeat(${type === 'weight_categories' ? '5' : type === 'age_categories' ? '4' : '3'}, 1fr) auto` }}>
+            <form onSubmit={addItem} className="grid gap-3 items-end mb-6" style={{ gridTemplateColumns: `repeat(${type === 'weight_categories' ? '5' : type === 'age_categories' ? '4' : type === 'belts' ? '4' : '3'}, 1fr) auto` }}>
                 <div>
                     <label className="block text-sm font-medium text-slate-700">Waarde</label>
                     <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nieuwe waarde..." />
@@ -269,6 +309,36 @@ export default function LookupListPage() {
                             min="0"
                             max="100"
                         />
+                    </div>
+                )}
+
+                {type === "belts" && (
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700">Kleur</label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            <button
+                                type="button"
+                                onClick={() => setColor("")}
+                                className={`w-8 h-8 rounded-lg border-2 bg-gray-100 flex items-center justify-center text-xs text-gray-600 hover:shadow-sm transition-shadow ${
+                                    color === "" ? "border-blue-500" : "border-gray-300"
+                                }`}
+                                title="Geen kleur"
+                            >
+                                —
+                            </button>
+                            {beltColors.map((c) => (
+                                <button
+                                    key={c.name}
+                                    type="button"
+                                    onClick={() => setColor(c.name)}
+                                    className={`w-8 h-8 rounded-lg border-2 hover:shadow-sm transition-shadow ${
+                                        color === c.name ? "border-blue-500 border-4" : "border-gray-300"
+                                    } ${c.border ? "shadow-inner" : ""}`}
+                                    style={{ backgroundColor: c.hex }}
+                                    title={c.name.charAt(0).toUpperCase() + c.name.slice(1)}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -314,6 +384,7 @@ export default function LookupListPage() {
                                     <th className="py-3 pr-4">Waarde</th>
                                     {type === "weight_categories" && <th className="py-3 pr-4">Geslacht</th>}
                                     {type === "age_categories" && <th className="py-3 pr-4">Min. Leeftijd</th>}
+                                    {type === "belts" && <th className="py-3 pr-4">Kleur</th>}
                                     <th className="py-3 pr-4">Volgorde</th>
                                     <th className="py-3 pr-4">Status</th>
                                     <th className="py-3"></th>
@@ -360,6 +431,65 @@ export default function LookupListPage() {
                                                     >
                                                         {it.min_age ?? "-"}
                                                     </span>
+                                                )}
+                                            </td>
+                                        )}
+                                        {type === "belts" && (
+                                            <td className="py-3 pr-4">
+                                                {editingId === it.id ? (
+                                                    <div className="flex flex-wrap gap-1 bg-white border border-slate-300 rounded-lg p-2 shadow-sm">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                updateColor(it, "");
+                                                            }}
+                                                            className={`w-6 h-6 rounded border-2 bg-gray-100 flex items-center justify-center text-xs text-gray-600 hover:shadow-sm transition-shadow ${
+                                                                (it.color ?? "") === "" ? "border-blue-500" : "border-gray-300"
+                                                            }`}
+                                                            title="Geen kleur"
+                                                        >
+                                                            —
+                                                        </button>
+                                                        {beltColors.map((c) => (
+                                                            <button
+                                                                key={c.name}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    updateColor(it, c.name);
+                                                                }}
+                                                                className={`w-6 h-6 rounded border-2 hover:shadow-sm transition-shadow ${
+                                                                    it.color === c.name ? "border-blue-500 border-3" : "border-gray-300"
+                                                                } ${c.border ? "shadow-inner" : ""}`}
+                                                                style={{ backgroundColor: c.hex }}
+                                                                title={c.name.charAt(0).toUpperCase() + c.name.slice(1)}
+                                                            />
+                                                        ))}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingId(null)}
+                                                            className="ml-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded border text-gray-600"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        className="cursor-pointer hover:bg-slate-100 px-1 py-1 rounded flex items-center gap-2"
+                                                        onClick={() => setEditingId(it.id)}
+                                                        title="Klik om te bewerken"
+                                                    >
+                                                        {it.color ? (
+                                                            <div 
+                                                                className={`w-6 h-6 rounded border-2 border-gray-300 ${getColorByName(it.color)?.border ? 'shadow-inner' : ''}`}
+                                                                style={{ backgroundColor: getColorByName(it.color)?.hex || '#CCCCCC' }}
+                                                                title={it.color.charAt(0).toUpperCase() + it.color.slice(1)}
+                                                            />
+                                                        ) : (
+                                                            <div className="w-6 h-6 rounded border-2 border-gray-300 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                                                                —
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </td>
                                         )}

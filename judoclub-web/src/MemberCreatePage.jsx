@@ -24,6 +24,27 @@ export default function MemberCreatePage() {
 
   const [belts, setBelts] = useState([]);
   const [beltsLoading, setBeltsLoading] = useState(true);
+  
+  // Belt colors voor mapping belt naam -> kleur (consistent met andere components)
+  const [beltColors, setBeltColors] = useState({});
+  
+  // Belt color definitions (consistent met LookupListPage)
+  const beltColorDefinitions = [
+    { name: 'wit', hex: '#FFFFFF', border: true },
+    { name: 'geel', hex: '#FFD700' },
+    { name: 'oranje', hex: '#FF8C00' },
+    { name: 'groen', hex: '#228B22' },
+    { name: 'blauw', hex: '#0000FF' },
+    { name: 'bruin', hex: '#8B4513' },
+    { name: 'zwart', hex: '#000000' }
+  ];
+  
+  // Helper functie voor belt color data
+  const getBeltColorData = (beltName) => {
+    if (!beltName) return null;
+    const colorName = beltColors[beltName];
+    return beltColorDefinitions.find(c => c.name === colorName);
+  };
 
   const [ageCategory, setAgeCategory] = useState("");
   const [ageCategories, setAgeCategories] = useState([]);
@@ -73,7 +94,7 @@ export default function MemberCreatePage() {
       const lowestCategory = availableCategories
         .filter(cat => cat.min_age != null)
         .sort((a, b) => a.min_age - b.min_age)[0];
-      
+
       return lowestCategory?.label || null;
     } catch (e) {
       console.error('Error calculating age category:', e);
@@ -166,10 +187,21 @@ export default function MemberCreatePage() {
         headers: { Accept: "application/json" },
       });
       const data = pluckData(res);
-      setBelts(data.filter((x) => x.active));
+      const activeBelts = data.filter((x) => x.active);
+      setBelts(activeBelts);
+      
+      // Load belt colors mapping
+      const colorMap = {};
+      activeBelts.forEach(belt => {
+        if (belt.color) {
+          colorMap[belt.label] = belt.color;
+        }
+      });
+      setBeltColors(colorMap);
     } catch (e) {
       console.error("Belts load error:", e);
       setBelts([]);
+      setBeltColors({});
     } finally {
       setBeltsLoading(false);
     }
@@ -301,14 +333,51 @@ export default function MemberCreatePage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700">Gordel</label>
-            <Select value={belt ?? ""} onChange={(e) => setBelt(e.target.value)} disabled={beltsLoading}>
-              <option value="">{beltsLoading ? "Gordels laden..." : "— Geen / kies —"}</option>
-              {belts.map((b) => (
-                <option key={b.id} value={b.label}>
-                  {b.label}
-                </option>
-              ))}
-            </Select>
+            {beltsLoading ? (
+              <div className="text-sm text-slate-500">Gordels laden...</div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBelt("")}
+                    className={`px-3 py-2 text-sm rounded-lg border-2 hover:shadow-sm transition-shadow ${
+                      belt === "" ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    Geen gordel
+                  </button>
+                  {belts.map((b) => {
+                    const colorData = getBeltColorData(b.label);
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setBelt(b.label)}
+                        className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border-2 hover:shadow-sm transition-shadow ${
+                          belt === b.label ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
+                        }`}
+                      >
+                        {colorData && (
+                          <div
+                            className={`w-5 h-5 rounded border-2 border-gray-300 ${
+                              colorData.border ? "shadow-inner" : ""
+                            }`}
+                            style={{ backgroundColor: colorData.hex }}
+                          />
+                        )}
+                        <span>{b.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {belt && (
+                  <div className="text-sm text-slate-600">
+                    Gekozen: <strong>{belt}</strong>
+                  </div>
+                )}
+              </div>
+            )}
             {fe("belt")}
           </div>
         </div>
