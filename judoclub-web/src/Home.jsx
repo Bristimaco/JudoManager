@@ -81,7 +81,15 @@ function MembersSummaryCard({ loading, total, genders }) {
 
 // InfoCard.jsx (of inline)
 
-function InfoCard({ title, subtitle, items }) {
+function InfoCard({ title, subtitle, items, showBeltColors = false, beltColors = {}, beltColorDefinitions = [] }) {
+  
+  // Helper functie voor belt color data
+  const getBeltColorData = (beltName) => {
+    if (!beltName) return null;
+    const colorName = beltColors[beltName];
+    return beltColorDefinitions.find(c => c.name === colorName);
+  };
+  
   return (
     <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col">
       <div className="flex items-start justify-between gap-3">
@@ -97,14 +105,26 @@ function InfoCard({ title, subtitle, items }) {
 
       <div className="mt-3 space-y-2 flex-1">
         {items?.length ? (
-          items.map((it) => (
-            <div key={it.label} className="flex items-center justify-between gap-3">
-              <div className="text-xs text-slate-700">{it.label}</div>
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                {it.value}
-              </span>
-            </div>
-          ))
+          items.map((it) => {
+            const colorData = showBeltColors ? getBeltColorData(it.label) : null;
+            return (
+              <div key={it.label} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  {colorData && (
+                    <div 
+                      className={`w-4 h-4 rounded border-2 border-gray-300 ${colorData.border ? 'shadow-inner' : ''}`}
+                      style={{ backgroundColor: colorData.hex }}
+                      title={colorData.name.charAt(0).toUpperCase() + colorData.name.slice(1)}
+                    />
+                  )}
+                  <div className="text-xs text-slate-700">{it.label}</div>
+                </div>
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                  {it.value}
+                </span>
+              </div>
+            );
+          })
         ) : (
           <div className="text-xs text-slate-600">Nog geen data.</div>
         )}
@@ -145,6 +165,44 @@ export default function Home() {
   const [dashLoading, setDashLoading] = useState(true);
   const [dashErr, setDashErr] = useState("");
   const [members, setMembers] = useState([]);
+  
+  // Belt colors voor mapping belt naam -> kleur (consistent met andere components)
+  const [beltColors, setBeltColors] = useState({});
+  
+  // Belt color definitions (consistent met andere components)
+  const beltColorDefinitions = [
+    { name: 'wit', hex: '#FFFFFF', border: true },
+    { name: 'geel', hex: '#FFD700' },
+    { name: 'oranje', hex: '#FF8C00' },
+    { name: 'groen', hex: '#228B22' },
+    { name: 'blauw', hex: '#0000FF' },
+    { name: 'bruin', hex: '#8B4513' },
+    { name: 'zwart', hex: '#000000' }
+  ];
+  
+  // Load belt colors voor mapping
+  async function loadBeltColors() {
+    try {
+      const res = await api.get("/api/lookups", {
+        params: { type: "belts", per_page: 200 },
+        headers: { Accept: "application/json" },
+      });
+      
+      const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+      const colorMap = {};
+      
+      data.forEach(belt => {
+        if (belt.color) {
+          colorMap[belt.label] = belt.color;
+        }
+      });
+      
+      setBeltColors(colorMap);
+    } catch (e) {
+      console.error("Failed to load belt colors in dashboard", e);
+      setBeltColors({});
+    }
+  }
 
   async function loadDashboard() {
     setDashLoading(true);
@@ -161,6 +219,7 @@ export default function Home() {
 
   useEffect(() => {
     loadDashboard();
+    loadBeltColors();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -216,6 +275,9 @@ export default function Home() {
           title="Verdeling gordels"
           subtitle="Meest voorkomend (hoog → laag)."
           items={dashLoading ? [] : stats.topBelts}
+          showBeltColors={true}
+          beltColors={beltColors}
+          beltColorDefinitions={beltColorDefinitions}
         />
       </div>
 
