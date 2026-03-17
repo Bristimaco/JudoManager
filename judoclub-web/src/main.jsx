@@ -12,6 +12,9 @@ import MemberCreatePage from "./MemberCreatePage";
 import MemberDetailPage from "./MemberDetailPage";
 import AdminPage from "./AdminPage";
 import LookupListPage from "./LookupListPage";
+import TournamentsPage from "./TournamentsPage";
+import TournamentCreatePage from "./TournamentCreatePage";
+import TournamentDetailPage from "./TournamentDetailPage";
 
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -71,6 +74,33 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             element={
               <RequireAuth>
                 <MemberDetailPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/tournaments"
+            element={
+              <RequireAuth>
+                <TournamentsPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/tournaments/new"
+            element={
+              <RequireAuth>
+                <TournamentCreatePage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/tournaments/:id"
+            element={
+              <RequireAuth>
+                <TournamentDetailPage />
               </RequireAuth>
             }
           />

@@ -82,14 +82,14 @@ function MembersSummaryCard({ loading, total, genders }) {
 // InfoCard.jsx (of inline)
 
 function InfoCard({ title, subtitle, items, showBeltColors = false, beltColors = {}, beltColorDefinitions = [] }) {
-  
+
   // Helper functie voor belt color data
   const getBeltColorData = (beltName) => {
     if (!beltName) return null;
     const colorName = beltColors[beltName];
     return beltColorDefinitions.find(c => c.name === colorName);
   };
-  
+
   return (
     <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col">
       <div className="flex items-start justify-between gap-3">
@@ -111,7 +111,7 @@ function InfoCard({ title, subtitle, items, showBeltColors = false, beltColors =
               <div key={it.label} className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   {colorData && (
-                    <div 
+                    <div
                       className={`w-4 h-4 rounded border-2 border-gray-300 ${colorData.border ? 'shadow-inner' : ''}`}
                       style={{ backgroundColor: colorData.hex }}
                       title={colorData.name.charAt(0).toUpperCase() + colorData.name.slice(1)}
@@ -165,10 +165,10 @@ export default function Home() {
   const [dashLoading, setDashLoading] = useState(true);
   const [dashErr, setDashErr] = useState("");
   const [members, setMembers] = useState([]);
-  
+
   // Belt colors voor mapping belt naam -> kleur (consistent met andere components)
   const [beltColors, setBeltColors] = useState({});
-  
+
   // Belt color definitions (consistent met andere components)
   const beltColorDefinitions = [
     { name: 'wit', hex: '#FFFFFF', border: true },
@@ -179,7 +179,7 @@ export default function Home() {
     { name: 'bruin', hex: '#8B4513' },
     { name: 'zwart', hex: '#000000' }
   ];
-  
+
   // Load belt colors voor mapping
   async function loadBeltColors() {
     try {
@@ -187,16 +187,16 @@ export default function Home() {
         params: { type: "belts", per_page: 200 },
         headers: { Accept: "application/json" },
       });
-      
+
       const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
       const colorMap = {};
-      
+
       data.forEach(belt => {
         if (belt.color) {
           colorMap[belt.label] = belt.color;
         }
       });
-      
+
       setBeltColors(colorMap);
     } catch (e) {
       console.error("Failed to load belt colors in dashboard", e);
@@ -282,7 +282,7 @@ export default function Home() {
       </div>
 
       {/* Tegels */}
-      <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="mt-4 grid sm:grid-cols-2 gap-4">
         <Tile
           title="Leden"
           desc="Zoek leden, voeg nieuwe leden toe en beheer profielen."
@@ -291,25 +291,17 @@ export default function Home() {
         />
 
         <Tile
-          title="Admin"
-          desc="Beheer lookups (gordels, leeftijd- & gewichtscategorieën)."
-          to="/admin"
-          accent="slate"
-        />
-
-        <Tile
           title="Toernooien"
-          desc="Maak toernooien aan en schrijf leden in (komt straks)."
+          desc="Maak toernooien aan en beheer inschrijvingen."
           to="/tournaments"
           accent="emerald"
-          disabled
         />
       </div>
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <div className="text-sm font-semibold text-slate-900">Volgende stap</div>
+        <div className="text-sm font-semibold text-slate-900">🎉 Beschikbaar</div>
         <div className="mt-1 text-sm text-slate-600">
-          Na de UI werken we aan <span className="font-medium text-slate-900">Toernooien + Inschrijvingen</span>.
+          Toernooien zijn nu beschikbaar! Maak toernooien aan met <span className="font-medium text-slate-900">kaartfunctionaliteit</span> en beheer alle details.
         </div>
       </div>
     </AppLayout>

@@ -40,6 +40,7 @@ export default function AppLayout({ title, subtitle, actions, children }) {
                     <nav className="hidden sm:flex items-center gap-1">
                         <NavItem to="/">Home</NavItem>
                         <NavItem to="/members">Leden</NavItem>
+                        <NavItem to="/tournaments">Toernooien</NavItem>
                         <NavItem to="/admin">Admin</NavItem>
                     </nav>
 

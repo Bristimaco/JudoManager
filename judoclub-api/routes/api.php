@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\LookupController;
+use App\Http\Controllers\TournamentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('members', MemberController::class);
     Route::apiResource('lookups', LookupController::class)->except(['show']);
+    Route::apiResource('tournaments', TournamentController::class);
 
     // Age category bulk update
     Route::post('/members/update-age-categories', function (Request $request) {
