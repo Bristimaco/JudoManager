@@ -206,11 +206,11 @@ export default function TournamentDetailPage() {
             await api.put(
                 `/api/tournaments/${id}`,
                 formData,
-                { 
-                    headers: { 
+                {
+                    headers: {
                         Accept: "application/json",
                         'Content-Type': 'multipart/form-data'
-                    } 
+                    }
                 }
             );
 
@@ -323,9 +323,9 @@ export default function TournamentDetailPage() {
                             {currentFlyerPath && (
                                 <div className="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                                     <div className="text-sm font-medium text-slate-700 mb-2">Huidige flyer:</div>
-                                    <a 
+                                    <a
                                         href={`http://localhost:8000/storage/${currentFlyerPath}`}
-                                        target="_blank" 
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-blue-600 hover:text-blue-700 underline text-sm"
                                     >
@@ -448,9 +448,9 @@ export default function TournamentDetailPage() {
                                 <div className="space-y-2">
                                     {currentFlyerPath.toLowerCase().endsWith('.pdf') ? (
                                         <div>
-                                            <a 
+                                            <a
                                                 href={`http://localhost:8000/storage/${currentFlyerPath}`}
-                                                target="_blank" 
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
                                             >
@@ -459,7 +459,7 @@ export default function TournamentDetailPage() {
                                         </div>
                                     ) : (
                                         <div>
-                                            <img 
+                                            <img
                                                 src={`http://localhost:8000/storage/${currentFlyerPath}`}
                                                 alt="Toernooi flyer"
                                                 className="w-full rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition"

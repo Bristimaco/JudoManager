@@ -25,11 +25,11 @@ function AddressMap({ address }) {
                     `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`
                 );
                 const data = await response.json();
-                
+
                 if (data && data.length > 0) {
                     const { lat, lon } = data[0];
                     // Create OpenStreetMap embed URL
-                    const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.01},${lat-0.01},${parseFloat(lon)+0.01},${parseFloat(lat)+0.01}&layer=mapnik&marker=${lat},${lon}`;
+                    const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.01},${lat - 0.01},${parseFloat(lon) + 0.01},${parseFloat(lat) + 0.01}&layer=mapnik&marker=${lat},${lon}`;
                     setMapUrl(osmUrl);
                 } else {
                     setError("Adres niet gevonden op kaart");
@@ -173,11 +173,11 @@ export default function TournamentCreatePage() {
             await api.post(
                 "/api/tournaments",
                 formData,
-                { 
-                    headers: { 
+                {
+                    headers: {
                         Accept: "application/json",
                         'Content-Type': 'multipart/form-data'
-                    } 
+                    }
                 }
             );
 
@@ -219,122 +219,122 @@ export default function TournamentCreatePage() {
                 {/* Formulier - 2 kolommen */}
                 <div className="lg:col-span-2">
                     <form onSubmit={onSubmit} className="grid gap-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700">Toernooi Naam *</label>
-                        <Input
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="bv. Wintertoernooi 2026"
-                        />
-                        {fe("name")}
-                    </div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Toernooi Naam *</label>
+                                <Input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="bv. Wintertoernooi 2026"
+                                />
+                                {fe("name")}
+                            </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700">Datum *</label>
-                        <DatePickerInput
-                            value={date || null}
-                            onChange={(iso) => setDate(iso ?? "")}
-                            placeholder="Kies datum..."
-                        />
-                        {fe("date")}
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-slate-700">Adres *</label>
-                    <textarea
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="Volledige adres: straat, nummer, postcode, stad"
-                        rows={3}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300 resize-y"
-                    />
-                    <div className="mt-1 text-xs text-slate-500">
-                        Geef het volledige adres op voor kaartfunctionaliteit
-                    </div>
-                    {fe("address")}
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-slate-700">Flyer (optioneel)</label>
-                    <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => setFlyer(e.target.files[0] || null)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300"
-                    />
-                    <div className="mt-1 text-xs text-slate-500">
-                        Upload een flyer (PDF, JPG, PNG - max 5MB)
-                    </div>
-                    {fe("flyer")}
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-3">Leeftijdscategorieën *</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3 bg-slate-50">
-                            {ageLoading ? (
-                                <div className="text-sm text-slate-500 col-span-full">Categorieën laden...</div>
-                            ) : ageCategories.length === 0 ? (
-                                <div className="text-sm text-slate-500 col-span-full">Geen categorieën beschikbaar</div>
-                            ) : (
-                                ageCategories.map((cat) => (
-                                    <label key={cat.id} className="flex items-center gap-2 select-none cursor-pointer hover:bg-slate-100 p-2 rounded text-sm">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedAgeCategories.has(cat.id)}
-                                            onChange={() => toggleAgeCategory(cat.id)}
-                                            className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
-                                        />
-                                        <span className="text-sm text-slate-700">{cat.label}</span>
-                                    </label>
-                                ))
-                            )}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Datum *</label>
+                                <DatePickerInput
+                                    value={date || null}
+                                    onChange={(iso) => setDate(iso ?? "")}
+                                    placeholder="Kies datum..."
+                                />
+                                {fe("date")}
+                            </div>
                         </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                            Selecteer alle leeftijdscategorieën waarvoor dit toernooi bedoeld is
-                        </div>
-                        {fe("age_category_ids")}
-                    </div>
 
-                    <div className="flex items-end">
-                        <label className="flex items-center gap-3 select-none">
-                            <input
-                                type="checkbox"
-                                checked={active}
-                                onChange={(e) => setActive(e.target.checked)}
-                                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">Adres *</label>
+                            <textarea
+                                value={address}
+                                onChange={(e) => setAddress(e.target.value)}
+                                placeholder="Volledige adres: straat, nummer, postcode, stad"
+                                rows={3}
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300 resize-y"
                             />
-                            <span className="text-sm text-slate-700">Actief toernooi</span>
-                        </label>
-                    </div>
-                </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                                Geef het volledige adres op voor kaartfunctionaliteit
+                            </div>
+                            {fe("address")}
+                        </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700">Beschrijving (optioneel)</label>
-                    <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Aanvullende informatie over het toernooi..."
-                        rows={4}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300 resize-y"
-                    />
-                    {fe("description")}
-                </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">Flyer (optioneel)</label>
+                            <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(e) => setFlyer(e.target.files[0] || null)}
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300"
+                            />
+                            <div className="mt-1 text-xs text-slate-500">
+                                Upload een flyer (PDF, JPG, PNG - max 5MB)
+                            </div>
+                            {fe("flyer")}
+                        </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <Button variant="primary" type="submit" disabled={disableSubmit}>
-                        {saving ? "Opslaan..." : "Toernooi Aanmaken"}
-                    </Button>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-3">Leeftijdscategorieën *</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3 bg-slate-50">
+                                    {ageLoading ? (
+                                        <div className="text-sm text-slate-500 col-span-full">Categorieën laden...</div>
+                                    ) : ageCategories.length === 0 ? (
+                                        <div className="text-sm text-slate-500 col-span-full">Geen categorieën beschikbaar</div>
+                                    ) : (
+                                        ageCategories.map((cat) => (
+                                            <label key={cat.id} className="flex items-center gap-2 select-none cursor-pointer hover:bg-slate-100 p-2 rounded text-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedAgeCategories.has(cat.id)}
+                                                    onChange={() => toggleAgeCategory(cat.id)}
+                                                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                                                />
+                                                <span className="text-sm text-slate-700">{cat.label}</span>
+                                            </label>
+                                        ))
+                                    )}
+                                </div>
+                                <div className="mt-1 text-xs text-slate-500">
+                                    Selecteer alle leeftijdscategorieën waarvoor dit toernooi bedoeld is
+                                </div>
+                                {fe("age_category_ids")}
+                            </div>
 
-                    <Link to="/tournaments" className="sm:ml-auto">
-                        <Button variant="secondary" type="button">
-                            Annuleer
-                        </Button>
-                    </Link>
-                </div>
-            </form>
+                            <div className="flex items-end">
+                                <label className="flex items-center gap-3 select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={active}
+                                        onChange={(e) => setActive(e.target.checked)}
+                                        className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                                    />
+                                    <span className="text-sm text-slate-700">Actief toernooi</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">Beschrijving (optioneel)</label>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Aanvullende informatie over het toernooi..."
+                                rows={4}
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300 resize-y"
+                            />
+                            {fe("description")}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                            <Button variant="primary" type="submit" disabled={disableSubmit}>
+                                {saving ? "Opslaan..." : "Toernooi Aanmaken"}
+                            </Button>
+
+                            <Link to="/tournaments" className="sm:ml-auto">
+                                <Button variant="secondary" type="button">
+                                    Annuleer
+                                </Button>
+                            </Link>
+                        </div>
+                    </form>
                 </div>
 
                 {/* Preview Sidebar - 1 kolom */}
@@ -364,7 +364,7 @@ export default function TournamentCreatePage() {
                                         </div>
                                     ) : (
                                         <div>
-                                            <img 
+                                            <img
                                                 src={URL.createObjectURL(flyer)}
                                                 alt="Flyer preview"
                                                 className="w-full rounded-lg border border-slate-200 max-h-48 object-cover"

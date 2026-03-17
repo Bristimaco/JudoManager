@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tournament;
+use App\Models\Member;
+use App\Models\Lookup;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class TournamentController extends Controller
 {
@@ -41,7 +44,7 @@ class TournamentController extends Controller
             $categoryIds = explode(',', $request->age_category_ids);
             $categoryIds = array_map('trim', $categoryIds);
             $categoryIds = array_filter($categoryIds, 'is_numeric');
-            
+
             if (!empty($categoryIds)) {
                 $query->whereHas('ageCategories', function ($q) use ($categoryIds) {
                     $q->whereIn('lookups.id', $categoryIds);
