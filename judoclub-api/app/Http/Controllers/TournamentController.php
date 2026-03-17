@@ -405,7 +405,7 @@ class TournamentController extends Controller
 
         $participant->update([
             'response_status' => 'accepted',
-            'status' => 'accepted'
+            'status' => 'confirmed'
         ]);
 
         return view('invitation-response', [

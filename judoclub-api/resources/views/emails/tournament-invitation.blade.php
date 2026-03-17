@@ -94,6 +94,20 @@
             @endif
             @if($tournament->address)
                 <p><strong>Locatie:</strong> {{ $tournament->address }}</p>
+                @if($staticMapUrl)
+                    <div style="margin-top: 12px;">
+                        <a href="{{ $mapsUrl }}" target="_blank">
+                            <img src="{{ $staticMapUrl }}" alt="Kaart van {{ $tournament->address }}" width="560"
+                                style="width:100%;max-width:560px;border-radius:6px;border:1px solid #e2e8f0;display:block;" />
+                        </a>
+                    </div>
+                @endif
+                @if($mapsUrl)
+                    <div style="margin-top: 8px; text-align: center;">
+                        <a href="{{ $mapsUrl }}" style="color: #2563eb; font-size: 13px; text-decoration: none;">📍 Bekijk
+                            locatie op Google Maps →</a>
+                    </div>
+                @endif
             @endif
             @if($tournament->description)
                 <p><strong>Omschrijving:</strong> {{ $tournament->description }}</p>

@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uitnodiging {{ $status === 'accepted' ? 'Bevestigd' : 'Afgewezen' }}</title>
+    <title>Uitnodiging {{ $status === 'accepted' ? 'Bevestigd' : ($status === 'error' ? 'Gesloten' : 'Afgewezen') }}
+    </title>
     <style>
         * {
             margin: 0;
@@ -131,6 +132,10 @@
         .error-color {
             color: #ef4444;
         }
+
+        .warning-color {
+            color: #f59e0b;
+        }
     </style>
 </head>
 
@@ -156,6 +161,22 @@
             <p class="message" style="margin-bottom: 20px; color: #374151;">
                 Zien we je op het toernooi! Voor vragen kun je contact opnemen met het Judoclub team.
             </p>
+        @elseif ($status === 'error')
+            <div class="status-icon warning-color">⚠️</div>
+            <h1>Inschrijvingen gesloten</h1>
+            <p class="message">{{ $message ?? 'Dit toernooi aanvaardt geen nieuwe inschrijvingen meer.' }}</p>
+
+            @if ($tournament)
+                <div class="tournament-info">
+                    <h3>Toernooi</h3>
+                    <p>{{ $tournament->name }}</p>
+                    @if ($tournament->date)
+                        <p style="margin-top: 8px; font-size: 14px; font-weight: normal; color: #6b7280;">
+                            📅 {{ \Carbon\Carbon::parse($tournament->date)->format('d-m-Y') }}
+                        </p>
+                    @endif
+                </div>
+            @endif
         @else
             <div class="status-icon error-color">✕</div>
             <h1>Afgemeld</h1>
