@@ -399,6 +399,28 @@ export default function TournamentDetailPage() {
         }
     }
 
+    async function startTournamentAction() {
+        if (!window.confirm('Wil je dit toernooi starten? Er kan maar 1 toernooi tegelijk gestart zijn.')) return;
+        try {
+            const res = await api.post(`/api/tournaments/${id}/start`, {}, { headers: { Accept: "application/json" } });
+            setPhase('gestart');
+            setCompleteResult({ type: 'success', message: res.data.message });
+        } catch (e) {
+            setCompleteResult({ type: 'error', message: e?.response?.data?.message || "Starten mislukt" });
+        }
+    }
+
+    async function stopTournamentAction() {
+        if (!window.confirm('Wil je dit toernooi beëindigen? De fase wordt gezet op "Afgelopen".')) return;
+        try {
+            const res = await api.post(`/api/tournaments/${id}/stop`, {}, { headers: { Accept: "application/json" } });
+            setPhase('afgelopen');
+            setCompleteResult({ type: 'success', message: res.data.message });
+        } catch (e) {
+            setCompleteResult({ type: 'error', message: e?.response?.data?.message || "Stoppen mislukt" });
+        }
+    }
+
     async function inviteMember(member) {
         if (!window.confirm(`Stuur een uitnodiging naar ${member.first_name} ${member.last_name}?`)) {
             return;
@@ -1078,6 +1100,43 @@ export default function TournamentDetailPage() {
                                             ))}
                                         </ul>
                                     )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {phase === 'inschrijvingen_compleet' && (
+                        <div className="mb-4">
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={startTournamentAction}
+                            >
+                                🏁 Start Toernooi
+                            </Button>
+                            {completeResult && (
+                                <div className={`mt-2 text-sm p-3 rounded-lg ${completeResult.type === 'success' ? 'text-green-800 bg-green-50' : 'text-red-800 bg-red-50'}`}>
+                                    <div className="font-medium">{completeResult.message}</div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {phase === 'gestart' && (
+                        <div className="mb-4 space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-medium text-green-800 bg-green-50 p-3 rounded-lg">
+                                <span>🏁 Dit toernooi is momenteel gestart.</span>
+                            </div>
+                            <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={stopTournamentAction}
+                            >
+                                Beëindig Toernooi
+                            </Button>
+                            {completeResult && (
+                                <div className={`mt-2 text-sm p-3 rounded-lg ${completeResult.type === 'success' ? 'text-green-800 bg-green-50' : 'text-red-800 bg-red-50'}`}>
+                                    <div className="font-medium">{completeResult.message}</div>
                                 </div>
                             )}
                         </div>

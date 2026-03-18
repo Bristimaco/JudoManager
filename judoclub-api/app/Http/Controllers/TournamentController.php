@@ -791,4 +791,52 @@ class TournamentController extends Controller
             return response()->json(['message' => 'Fout bij afsluiten inschrijvingen: ' . $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Start a tournament. Only one tournament can be started at a time.
+     */
+    public function startTournament(Tournament $tournament)
+    {
+        if ($tournament->phase !== 'inschrijvingen_compleet') {
+            return response()->json(['message' => 'Enkel een toernooi met afgesloten inschrijvingen kan worden gestart.'], 422);
+        }
+
+        // Check if another tournament is already started
+        $alreadyStarted = Tournament::where('phase', 'gestart')->where('id', '!=', $tournament->id)->first();
+        if ($alreadyStarted) {
+            return response()->json([
+                'message' => "Er is al een gestart toernooi: \"{$alreadyStarted->name}\". Stop dat toernooi eerst.",
+            ], 422);
+        }
+
+        $tournament->update(['phase' => 'gestart']);
+        return response()->json(['message' => 'Toernooi gestart!']);
+    }
+
+    /**
+     * Stop a started tournament (move to 'afgelopen').
+     */
+    public function stopTournament(Tournament $tournament)
+    {
+        if ($tournament->phase !== 'gestart') {
+            return response()->json(['message' => 'Enkel een gestart toernooi kan worden gestopt.'], 422);
+        }
+
+        $tournament->update(['phase' => 'afgelopen']);
+        return response()->json(['message' => 'Toernooi beëindigd. Fase gewijzigd naar "Afgelopen".']);
+    }
+
+    /**
+     * Return the currently started tournament (if any).
+     */
+    public function activeTournament()
+    {
+        $tournament = Tournament::where('phase', 'gestart')->with('ageCategories')->first();
+
+        if (!$tournament) {
+            return response()->json(['data' => null]);
+        }
+
+        return response()->json(['data' => $tournament]);
+    }
 }

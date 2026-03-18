@@ -126,6 +126,7 @@ export default function TournamentsPage() {
             voorbereiding: { label: "Voorbereiding", tone: "neutral" },
             inschrijvingen_uitvoeren: { label: "Inschrijvingen", tone: "info" },
             inschrijvingen_compleet: { label: "Compleet", tone: "ok" },
+            gestart: { label: "🏁 Gestart", tone: "ok" },
             afgelopen: { label: "Afgelopen", tone: "neutral" },
         };
         const config = phaseMap[phase] || { label: phase, tone: "neutral" };
@@ -189,6 +190,7 @@ export default function TournamentsPage() {
                         <option value="voorbereiding">Voorbereiding</option>
                         <option value="inschrijvingen_uitvoeren">Inschrijvingen</option>
                         <option value="inschrijvingen_compleet">Compleet</option>
+                        <option value="gestart">Gestart</option>
                         <option value="afgelopen">Afgelopen</option>
                     </Select>
                 </div>

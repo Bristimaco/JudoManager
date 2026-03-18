@@ -20,7 +20,7 @@ Route::get('/health', function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/members/export', [MemberImportExportController::class, 'export']);
     Route::post('/members/import', [MemberImportExportController::class, 'import']);
-    
+
     Route::get('/lookups/export', [LookupImportExportController::class, 'export']);
     Route::post('/lookups/import', [LookupImportExportController::class, 'import']);
 });
@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('members', MemberController::class);
     Route::apiResource('lookups', LookupController::class)->except(['show']);
+    Route::get('/tournaments/active', [TournamentController::class, 'activeTournament']);
     Route::apiResource('tournaments', TournamentController::class);
 
     // Tournament eligible members
@@ -54,6 +55,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tournaments/{tournament}/participants/{member}/unregister', [TournamentController::class, 'unregisterParticipant']);
     Route::post('/tournaments/{tournament}/participants/{member}/remove-from-registration-list', [TournamentController::class, 'removeFromRegistrationList']);
     Route::post('/tournaments/{tournament}/complete-registrations', [TournamentController::class, 'completeRegistrations']);
+    Route::post('/tournaments/{tournament}/start', [TournamentController::class, 'startTournament']);
+    Route::post('/tournaments/{tournament}/stop', [TournamentController::class, 'stopTournament']);
     Route::post('/tournaments/{tournament}/participants', [TournamentController::class, 'addParticipant']);
     Route::get('/tournaments/{tournament}/available-members', [TournamentController::class, 'availableMembers']);
 
