@@ -20,7 +20,7 @@ import TournamentDetailPage from "./TournamentDetailPage";
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/judomanager-judoclub-web">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
 
