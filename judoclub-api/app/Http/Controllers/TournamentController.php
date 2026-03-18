@@ -177,7 +177,6 @@ class TournamentController extends Controller
             'age_category_ids.*' => 'required|exists:lookups,id',
             'description' => 'nullable|string',
             'active' => 'boolean',
-            'phase' => 'nullable|in:voorbereiding,inschrijvingen_uitvoeren,inschrijvingen_compleet,afgelopen',
             'invitation_deadline' => 'nullable|date',
         ]);
 
@@ -192,6 +191,8 @@ class TournamentController extends Controller
 
         $tournamentData = collect($validated)->except(['age_category_ids', 'flyer'])->toArray();
         $tournamentData['flyer'] = $flyerPath;
+        // Never overwrite phase via the update endpoint — use dedicated start/stop/completeRegistrations endpoints
+        unset($tournamentData['phase']);
         $tournament->update($tournamentData);
 
         $tournament->ageCategories()->sync($validated['age_category_ids']);
