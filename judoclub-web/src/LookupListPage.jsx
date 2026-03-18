@@ -265,7 +265,7 @@ export default function LookupListPage() {
                 params: { type },
                 responseType: 'blob',
             });
-            
+
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -297,10 +297,10 @@ export default function LookupListPage() {
 
             const result = response.data;
             const message = `${result.inserted} toegevoegd, ${result.updated} bijgewerkt, ${result.skipped} overgeslagen.`;
-            setErr(result.errors?.length > 0 
-                ? `${message}\nFouten: ${result.errors.map(e => `Rij ${e.row}: ${e.message}`).join('\n')}` 
+            setErr(result.errors?.length > 0
+                ? `${message}\nFouten: ${result.errors.map(e => `Rij ${e.row}: ${e.message}`).join('\n')}`
                 : message);
-            
+
             await load();
         } catch (e) {
             setErr(`Import mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
@@ -341,7 +341,7 @@ export default function LookupListPage() {
                     >
                         Exporteren
                     </Button>
-                    <label className="appearance-none inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition bg-white text-slate-900 border border-slate-300 hover:bg-slate-100 focus:ring-4 focus:ring-slate-200 disabled:opacity-60 cursor-pointer" style={{pointerEvents: saving ? 'none' : 'auto', opacity: saving ? 0.6 : 1}}>
+                    <label className="appearance-none inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition bg-white text-slate-900 border border-slate-300 hover:bg-slate-100 focus:ring-4 focus:ring-slate-200 disabled:opacity-60 cursor-pointer" style={{ pointerEvents: saving ? 'none' : 'auto', opacity: saving ? 0.6 : 1 }}>
                         Importeren
                         <input
                             type="file"

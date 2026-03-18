@@ -20,7 +20,7 @@ Route::get('/health', function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/members/export', [MemberImportExportController::class, 'export']);
     Route::post('/members/import', [MemberImportExportController::class, 'import']);
-    
+
     Route::get('/lookups/export', [LookupImportExportController::class, 'export']);
     Route::post('/lookups/import', [LookupImportExportController::class, 'import']);
 });
