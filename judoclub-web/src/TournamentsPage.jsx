@@ -9,7 +9,7 @@ import Pagination from "./components/Pagination";
 export default function TournamentsPage() {
     const [q, setQ] = useState("");
     const [statusFilter, setStatusFilter] = useState("upcoming"); // 'upcoming', 'past', 'all'
-    const [activeFilter, setActiveFilter] = useState("active"); // 'active', 'inactive', 'all'
+    const [phaseFilter, setPhaseFilter] = useState("all"); // 'voorbereiding', 'inschrijvingen_uitvoeren', 'inschrijvingen_compleet', 'afgelopen', 'all'
     const [selectedAgeCategories, setSelectedAgeCategories] = useState(new Set());
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -67,8 +67,7 @@ export default function TournamentsPage() {
             if (q) params.q = q;
             if (statusFilter === "upcoming") params.status = "upcoming";
             if (statusFilter === "past") params.status = "past";
-            if (activeFilter === "active") params.active = "true";
-            if (activeFilter === "inactive") params.active = "false";
+            if (phaseFilter !== "all") params.phase = phaseFilter;
             if (selectedAgeCategories.size > 0) {
                 params.age_category_ids = Array.from(selectedAgeCategories).join(',');
             }
@@ -100,12 +99,12 @@ export default function TournamentsPage() {
     useEffect(() => {
         load();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, q, statusFilter, activeFilter, selectedAgeCategories]);
+    }, [page, q, statusFilter, phaseFilter, selectedAgeCategories]);
 
     // Reset to page 1 when filters change
     useEffect(() => {
         setPage(1);
-    }, [q, statusFilter, activeFilter]);
+    }, [q, statusFilter, phaseFilter]);
 
     // Helper om status badge te bepalen
     const getStatusBadge = (tournament) => {
@@ -180,15 +179,17 @@ export default function TournamentsPage() {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Actief</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Fase</label>
                     <Select
-                        value={activeFilter}
-                        onChange={(e) => setActiveFilter(e.target.value)}
+                        value={phaseFilter}
+                        onChange={(e) => setPhaseFilter(e.target.value)}
                         className="w-full"
                     >
-                        <option value="active">Actieve toernooien</option>
-                        <option value="inactive">Inactieve toernooien</option>
-                        <option value="all">Alle toernooien</option>
+                        <option value="all">Alle fasen</option>
+                        <option value="voorbereiding">Voorbereiding</option>
+                        <option value="inschrijvingen_uitvoeren">Inschrijvingen</option>
+                        <option value="inschrijvingen_compleet">Compleet</option>
+                        <option value="afgelopen">Afgelopen</option>
                     </Select>
                 </div>
 
@@ -198,7 +199,7 @@ export default function TournamentsPage() {
                         onClick={() => {
                             setQ("");
                             setStatusFilter("upcoming");
-                            setActiveFilter("active");
+                            setPhaseFilter("all");
                             setSelectedAgeCategories(new Set());
                         }}
                         className="w-full"
@@ -255,8 +256,7 @@ export default function TournamentsPage() {
                                     <th className="py-3 pr-4">Leeftijdscategorie</th>
                                     <th className="py-3 pr-4">Adres</th>
                                     <th className="py-3 pr-4">Fase</th>
-                                    <th className="py-3 pr-4">Status</th>
-                                    <th className="py-3">Actief</th>
+                                    <th className="py-3">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -298,12 +298,7 @@ export default function TournamentsPage() {
                                             </div>
                                         </td>
                                         <td className="py-3 pr-4">{getPhaseBadge(tournament.phase)}</td>
-                                        <td className="py-3 pr-4">{getStatusBadge(tournament)}</td>
-                                        <td className="py-3">
-                                            <Badge tone={tournament.active ? "ok" : "neutral"}>
-                                                {tournament.active ? "Actief" : "Inactief"}
-                                            </Badge>
-                                        </td>
+                                        <td className="py-3">{getStatusBadge(tournament)}</td>
                                     </tr>
                                 ))}
                             </tbody>

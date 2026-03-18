@@ -25,10 +25,9 @@ class TournamentController extends Controller
     {
         $query = Tournament::query();
 
-        // Filter op actief/inactief
-        if ($request->has('active')) {
-            $active = $request->boolean('active');
-            $query->where('active', $active);
+        // Filter op fase (voorbereiding, inschrijvingen_uitvoeren, inschrijvingen_compleet, afgelopen)
+        if ($request->filled('phase')) {
+            $query->where('phase', $request->phase);
         }
 
         // Filter op status (komend/voorbij)
@@ -771,13 +770,13 @@ class TournamentController extends Controller
                 ->get();
 
             if ($notRegistered->isNotEmpty()) {
-                $names = $notRegistered->map(function($p) {
+                $names = $notRegistered->map(function ($p) {
                     return $p->member->first_name . ' ' . $p->member->last_name;
                 })->join(', ');
-                
+
                 return response()->json([
                     'message' => "Niet alle deelnemers zijn ingeschreven. Nog niet ingeschreven: {$names}.",
-                    'not_registered' => $notRegistered->map(function($p) {
+                    'not_registered' => $notRegistered->map(function ($p) {
                         return [
                             'id' => $p->member_id,
                             'name' => $p->member->first_name . ' ' . $p->member->last_name,
