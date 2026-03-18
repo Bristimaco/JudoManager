@@ -57,6 +57,13 @@ export default function MembersPage() {
         );
     };
 
+    // Excel export
+    const [exporting, setExporting] = useState(false);
+
+    // Excel import
+    const [importing, setImporting] = useState(false);
+    const [importResults, setImportResults] = useState(null);
+
     // Age category update
     const [updatingAgeCategories, setUpdatingAgeCategories] = useState(false);
     const [updateResults, setUpdateResults] = useState(null);
@@ -165,6 +172,51 @@ export default function MembersPage() {
         load();
     }
 
+    async function handleExport() {
+        setExporting(true);
+        setErr("");
+        try {
+            const res = await api.get("/api/members/export", {
+                responseType: "blob",
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "members.xlsx";
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            setErr("Export mislukt.");
+        } finally {
+            setExporting(false);
+        }
+    }
+
+    async function handleImport(e) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = "";
+
+        setImporting(true);
+        setErr("");
+        setImportResults(null);
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await api.post("/api/members/import", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            setImportResults(res.data);
+            load();
+        } catch (e) {
+            setErr(e?.response?.data?.message ?? "Import mislukt.");
+        } finally {
+            setImporting(false);
+        }
+    }
+
     async function updateAgeCategories(dryRun = false) {
         setUpdatingAgeCategories(true);
         setErr("");
@@ -206,6 +258,19 @@ export default function MembersPage() {
                     <Button variant="primary" onClick={onRefresh} disabled={loading}>
                         {loading ? "Laden..." : "Refresh"}
                     </Button>
+                    <Button variant="secondary" onClick={handleExport} disabled={exporting}>
+                        {exporting ? "Bezig..." : "Exporteer Excel"}
+                    </Button>
+                    <label className={`px-4 py-2 rounded-xl font-medium transition focus:outline-none focus:ring-4 bg-slate-100 text-slate-900 hover:bg-slate-200 focus:ring-slate-200 cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
+                        <input
+                            type="file"
+                            accept=".xlsx,.xls"
+                            className="hidden"
+                            onChange={handleImport}
+                            disabled={importing}
+                        />
+                        {importing ? "Importeren..." : "Importeer Excel"}
+                    </label>
                     <Button
                         variant="danger"
                         onClick={() => {
@@ -261,6 +326,32 @@ export default function MembersPage() {
             {err && (
                 <div className="mb-4">
                     <Alert variant="error">{err}</Alert>
+                </div>
+            )}
+
+            {importResults && (
+                <div className="mb-4">
+                    <Alert variant={importResults.errors?.length > 0 ? "warning" : "success"}>
+                        <div className="font-medium mb-1">Import voltooid</div>
+                        <div className="text-sm">
+                            {importResults.inserted} toegevoegd · {importResults.updated} bijgewerkt · {importResults.skipped} overgeslagen
+                        </div>
+                        {importResults.errors?.length > 0 && (
+                            <details className="mt-2">
+                                <summary className="cursor-pointer text-sm font-medium">
+                                    {importResults.errors.length} fout(en)
+                                </summary>
+                                <div className="mt-1 max-h-40 overflow-y-auto text-xs space-y-1">
+                                    {importResults.errors.map((e, i) => (
+                                        <div key={i}>Rij {e.row} — {e.field}: {e.message}</div>
+                                    ))}
+                                </div>
+                            </details>
+                        )}
+                        <button onClick={() => setImportResults(null)} className="mt-2 text-sm underline text-slate-600 hover:text-slate-900">
+                            Sluiten
+                        </button>
+                    </Alert>
                 </div>
             )}
 
