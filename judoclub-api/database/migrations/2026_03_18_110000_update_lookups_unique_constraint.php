@@ -29,7 +29,7 @@ return new class extends Migration
         } elseif ($driver === 'pgsql') {
             // PostgreSQL: Create unique constraint with COALESCE
             DB::statement("CREATE UNIQUE INDEX IF NOT EXISTS lookups_type_label_gender_age_category_unique 
-                          ON lookups(type, label, gender, COALESCE(age_category, '')::text)");
+                          ON lookups(type, label, gender, COALESCE(age_category, ''))");
         } else {
             // MySQL or other: Use a composite unique key
             Schema::table('lookups', function (Blueprint $table) {
