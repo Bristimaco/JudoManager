@@ -17,7 +17,7 @@ class UserSeeder extends Seeder
             ['email' => 'admin@judoclub.test'],
             [
                 'name' => 'Admin',
-                'password' => bcrypt('password'),
+                'password' => bcrypt('testpassword123'),
             ]
         );
     }
