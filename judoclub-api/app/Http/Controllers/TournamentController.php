@@ -25,10 +25,9 @@ class TournamentController extends Controller
     {
         $query = Tournament::query();
 
-        // Filter op actief/inactief
-        if ($request->has('active')) {
-            $active = $request->boolean('active');
-            $query->where('active', $active);
+        // Filter op fase (voorbereiding, inschrijvingen_uitvoeren, inschrijvingen_compleet, afgelopen)
+        if ($request->filled('phase')) {
+            $query->where('phase', $request->phase);
         }
 
         // Filter op status (komend/voorbij)
