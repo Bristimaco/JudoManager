@@ -13,8 +13,29 @@ return new class extends Migration {
     {
         $driver = DB::getDriverName();
 
+        // First: Remove duplicates before creating constraint
+        // Keep only the first (MIN id) of each duplicate group
         if ($driver === 'sqlite') {
-            // SQLite: Drop old unique constraint and create new one
+            DB::statement('
+                DELETE FROM lookups WHERE id NOT IN (
+                    SELECT MIN(id) FROM lookups 
+                    WHERE type = "weight_categories" AND gender IS NOT NULL
+                    GROUP BY type, label, gender, COALESCE(age_category, "")
+                ) AND type = "weight_categories"
+            ');
+        } elseif ($driver === 'pgsql') {
+            DB::statement('
+                DELETE FROM lookups WHERE id NOT IN (
+                    SELECT MIN(id) FROM lookups 
+                    WHERE type = \'weight_categories\' AND gender IS NOT NULL
+                    GROUP BY type, label, gender, COALESCE(age_category, \'\')
+                ) AND type = \'weight_categories\'
+            ');
+        }
+
+        // Now create the constraint
+        if ($driver === 'sqlite') {
+            // SQLite: Drop old index if exists and create new one
             try {
                 DB::statement('DROP INDEX IF EXISTS lookups_type_label_gender_unique');
             } catch (\Exception $e) {
@@ -24,7 +45,7 @@ return new class extends Migration {
             DB::statement('CREATE UNIQUE INDEX IF NOT EXISTS lookups_type_label_gender_age_category_unique 
                           ON lookups(type, label, gender, COALESCE(age_category, ""))');
         } elseif ($driver === 'pgsql') {
-            // PostgreSQL: Drop old constraint and create new one with COALESCE
+            // PostgreSQL: Drop old index if exists and create new one with COALESCE
             try {
                 DB::statement('DROP INDEX IF EXISTS lookups_type_label_gender_unique');
             } catch (\Exception $e) {
