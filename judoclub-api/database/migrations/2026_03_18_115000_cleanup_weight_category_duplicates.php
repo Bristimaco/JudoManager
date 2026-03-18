@@ -23,13 +23,14 @@ return new class extends Migration {
                 ) AND type = "weight_categories"
             ');
         } elseif ($driver === 'pgsql') {
+            // PostgreSQL: Use window function to handle COALESCE in GROUP BY
             DB::statement('
                 DELETE FROM lookups WHERE id NOT IN (
-                    SELECT MIN(id) FROM lookups 
+                    SELECT DISTINCT ON (type, label, gender, COALESCE(age_category, \'\')) id
+                    FROM lookups 
                     WHERE type = \'weight_categories\' AND gender IS NOT NULL
-                    GROUP BY type, label, gender, COALESCE(age_category, \'\')
-                ) AND type = \'weight_categories\'
-            )
+                    ORDER BY type, label, gender, COALESCE(age_category, \'\'), id
+                )
             ');
         } else {
             // MySQL: Handle duplicate cleanup
