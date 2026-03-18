@@ -24,12 +24,14 @@ class MembersExport implements FromCollection, WithHeadings, WithMapping
             'license_number',
             'first_name',
             'last_name',
+            'email',
             'gender',        // M/V
             'birthdate',     // YYYY-MM-DD
             'belt',
             'age_category',
             'weight_category',
             'active',        // 1/0
+            'interested_in_competition', // 1/0
         ];
     }
 
@@ -40,12 +42,14 @@ class MembersExport implements FromCollection, WithHeadings, WithMapping
             $m->license_number,
             $m->first_name,
             $m->last_name,
+            $m->email,
             $m->gender,
             optional($m->birthdate)->format('Y-m-d'),
             $m->belt,
             $m->age_category,
             $m->weight_category,
             $m->active ? 1 : 0,
+            $m->interested_in_competition ? 1 : 0,
         ];
     }
 }
