@@ -114,9 +114,9 @@ export default function MemberCreatePage() {
 
   useEffect(() => {
     setWeightCategory("");
-    loadWeightCategories(gender);
+    loadWeightCategories(gender, ageCategory);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gender]);
+  }, [gender, ageCategory]);
 
   // Automatisch leeftijdscategorie bepalen op basis van geboortedatum
   useEffect(() => {
@@ -141,7 +141,7 @@ export default function MemberCreatePage() {
     }
   }
 
-  async function loadWeightCategories(currentGender) {
+  async function loadWeightCategories(currentGender, currentAgeCategory) {
     if (!currentGender) {
       setWeightCategories([]);
       setWeightLoading(false);
@@ -150,8 +150,12 @@ export default function MemberCreatePage() {
 
     setWeightLoading(true);
     try {
+      const params = { type: "weight_categories", gender: currentGender, per_page: 200, page: 1 };
+      if (currentAgeCategory) {
+        params.age_category = currentAgeCategory;
+      }
       const res = await api.get("/api/lookups", {
-        params: { type: "weight_categories", gender: currentGender, per_page: 200, page: 1 },
+        params,
         headers: { Accept: "application/json" },
       });
       const data = pluckData(res);

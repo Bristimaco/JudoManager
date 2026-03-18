@@ -83,7 +83,7 @@ export default function MemberDetailPage() {
     }
   }
 
-  async function loadWeightCategories(currentGender) {
+  async function loadWeightCategories(currentGender, currentAgeCategory) {
     if (!currentGender) {
       setWeightCategories([]);
       setWeightLoading(false);
@@ -92,8 +92,12 @@ export default function MemberDetailPage() {
 
     setWeightLoading(true);
     try {
+      const params = { type: "weight_categories", gender: currentGender, per_page: 200, page: 1 };
+      if (currentAgeCategory) {
+        params.age_category = currentAgeCategory;
+      }
       const res = await api.get("/api/lookups", {
-        params: { type: "weight_categories", gender: currentGender, per_page: 200, page: 1 },
+        params,
         headers: { Accept: "application/json" },
       });
 
@@ -174,7 +178,7 @@ export default function MemberDetailPage() {
       setWeightCategory(m.weight_category ?? "");
 
       // ✅ dit kan nu niet meer crashen door paginated lookups
-      await loadWeightCategories(m.gender ?? "");
+      await loadWeightCategories(m.gender ?? "", m.age_category ?? "");
     } catch (e) {
       console.error("MEMBER LOAD ERROR", e);
       setError(`Laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
@@ -194,9 +198,9 @@ export default function MemberDetailPage() {
   useEffect(() => {
     if (loading) return;
     setWeightCategory("");
-    loadWeightCategories(gender);
+    loadWeightCategories(gender, ageCategory);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gender]);
+  }, [gender, ageCategory]);
 
   function fe(name) {
     const msgs = fieldErrors?.[name];

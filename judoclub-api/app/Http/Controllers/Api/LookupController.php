@@ -14,10 +14,12 @@ class LookupController extends Controller
     {
         $type = $request->query('type');
         $gender = $request->query('gender'); // optioneel voor weight_categories
+        $ageCategory = $request->query('age_category'); // optioneel voor weight_categories
 
         $request->validate([
             'type' => ['required', 'string', Rule::in(['belts', 'age_categories', 'weight_categories'])],
             'gender' => ['nullable', Rule::in(\App\Enums\Gender::options())],
+            'age_category' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
@@ -26,6 +28,7 @@ class LookupController extends Controller
         return Lookup::query()
             ->where('type', $type)
             ->when($type === 'weight_categories' && $gender, fn($q) => $q->where('gender', $gender))
+            ->when($type === 'weight_categories' && $ageCategory, fn($q) => $q->where('age_category', $ageCategory))
             ->orderByRaw("CASE WHEN gender IS NULL THEN 1 ELSE 0 END")
             ->orderBy('gender')
             ->orderBy('sort_order')
