@@ -102,12 +102,14 @@ class MembersImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
                     'license_number' => $licensenumber,
                     'first_name' => $first,
                     'last_name' => $last,
+                    'email' => isset($row['email']) && $row['email'] !== '' ? trim((string) $row['email']) : null,
                     'gender' => $gender,
                     'birthdate' => $birthdate,
                     'belt' => isset($row['belt']) && $row['belt'] !== '' ? trim((string) $row['belt']) : null,
                     'age_category' => isset($row['age_category']) && $row['age_category'] !== '' ? trim((string) $row['age_category']) : null,
                     'weight_category' => $weightCategory,
                     'active' => isset($row['active']) ? (bool) intval($row['active']) : true,
+                    'interested_in_competition' => isset($row['interested_in_competition']) ? (bool) intval($row['interested_in_competition']) : false,
                 ];
 
                 $id = isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null;
