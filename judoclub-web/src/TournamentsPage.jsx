@@ -121,6 +121,18 @@ export default function TournamentsPage() {
         }
     };
 
+    // Helper om fase badge te bepalen
+    const getPhaseBadge = (phase) => {
+        const phaseMap = {
+            voorbereiding: { label: "Voorbereiding", tone: "neutral" },
+            inschrijvingen_uitvoeren: { label: "Inschrijvingen", tone: "info" },
+            inschrijvingen_compleet: { label: "Compleet", tone: "ok" },
+            afgelopen: { label: "Afgelopen", tone: "neutral" },
+        };
+        const config = phaseMap[phase] || { label: phase, tone: "neutral" };
+        return <Badge tone={config.tone}>{config.label}</Badge>;
+    };
+
     return (
         <AppLayout
             title="Toernooien"
@@ -242,6 +254,7 @@ export default function TournamentsPage() {
                                     <th className="py-3 pr-4">Datum</th>
                                     <th className="py-3 pr-4">Leeftijdscategorie</th>
                                     <th className="py-3 pr-4">Adres</th>
+                                    <th className="py-3 pr-4">Fase</th>
                                     <th className="py-3 pr-4">Status</th>
                                     <th className="py-3">Actief</th>
                                 </tr>
@@ -284,6 +297,7 @@ export default function TournamentsPage() {
                                                 {tournament.address}
                                             </div>
                                         </td>
+                                        <td className="py-3 pr-4">{getPhaseBadge(tournament.phase)}</td>
                                         <td className="py-3 pr-4">{getStatusBadge(tournament)}</td>
                                         <td className="py-3">
                                             <Badge tone={tournament.active ? "ok" : "neutral"}>
