@@ -15,18 +15,22 @@ return new class extends Migration {
 
         if ($driver === 'sqlite') {
             // SQLite: Drop old unique constraint and create new one
-            Schema::table('lookups', function (Blueprint $table) {
-                try {
-                    $table->dropUnique(['type', 'label', 'gender']);
-                } catch (\Exception $e) {
-                    // Constraint might not exist
-                }
-            });
+            try {
+                DB::statement('DROP INDEX IF EXISTS lookups_type_label_gender_unique');
+            } catch (\Exception $e) {
+                // Index might not exist, that's OK
+            }
 
             DB::statement('CREATE UNIQUE INDEX IF NOT EXISTS lookups_type_label_gender_age_category_unique 
                           ON lookups(type, label, gender, COALESCE(age_category, ""))');
         } elseif ($driver === 'pgsql') {
-            // PostgreSQL: Create unique constraint with COALESCE
+            // PostgreSQL: Drop old constraint and create new one with COALESCE
+            try {
+                DB::statement('DROP INDEX IF EXISTS lookups_type_label_gender_unique');
+            } catch (\Exception $e) {
+                // Index might not exist, that's OK
+            }
+
             DB::statement("CREATE UNIQUE INDEX IF NOT EXISTS lookups_type_label_gender_age_category_unique 
                           ON lookups(type, label, gender, COALESCE(age_category, ''))");
         } else {
