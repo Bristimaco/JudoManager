@@ -756,31 +756,40 @@ class TournamentController extends Controller
      */
     public function completeRegistrations(Tournament $tournament)
     {
-        if ($tournament->phase !== 'inschrijvingen_uitvoeren') {
-            return response()->json(['message' => 'Fase wijzigen naar "inschrijvingen compleet" is alleen mogelijk vanuit de fase "Inschrijvingen uitvoeren".'], 422);
+        try {
+            if ($tournament->phase !== 'inschrijvingen_uitvoeren') {
+                return response()->json(['message' => 'Fase wijzigen naar "inschrijvingen compleet" is alleen mogelijk vanuit de fase "Inschrijvingen uitvoeren".'], 422);
+            }
+
+            // Find accepted participants whose registration is not yet confirmed
+            // Deelnemers die zijn uitgeschreven (status = 'uitgeschreven') mogen het afsluiten niet blokkeren
+            // Alleen deelnemers zonder inschrijving (status = NULL) blokkeren
+            $notRegistered = TournamentParticipant::where('tournament_id', $tournament->id)
+                ->where('response_status', 'accepted')
+                ->whereNull('registration_status')
+                ->with('member')
+                ->get();
+
+            if ($notRegistered->isNotEmpty()) {
+                $names = $notRegistered->map(function($p) {
+                    return $p->member->first_name . ' ' . $p->member->last_name;
+                })->join(', ');
+                
+                return response()->json([
+                    'message' => "Niet alle deelnemers zijn ingeschreven. Nog niet ingeschreven: {$names}.",
+                    'not_registered' => $notRegistered->map(function($p) {
+                        return [
+                            'id' => $p->member_id,
+                            'name' => $p->member->first_name . ' ' . $p->member->last_name,
+                        ];
+                    })->values(),
+                ], 422);
+            }
+
+            $tournament->update(['phase' => 'inschrijvingen_compleet']);
+            return response()->json(['message' => 'Inschrijvingen zijn afgesloten. Fase gewijzigd naar "Inschrijvingen compleet".']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Fout bij afsluiten inschrijvingen: ' . $e->getMessage()], 500);
         }
-
-        // Find accepted participants whose registration is not yet confirmed
-        // Deelnemers die zijn uitgeschreven (status = 'uitgeschreven') mogen het afsluiten niet blokkeren
-        // Alleen deelnemers zonder inschrijving (status = NULL) blokkeren
-        $notRegistered = $tournament->participants()
-            ->where('response_status', 'accepted')
-            ->whereNull('registration_status')
-            ->with('member')
-            ->get();
-
-        if ($notRegistered->isNotEmpty()) {
-            $names = $notRegistered->map(fn($p) => $p->member->first_name . ' ' . $p->member->last_name)->join(', ');
-            return response()->json([
-                'message' => "Niet alle deelnemers zijn ingeschreven. Nog niet ingeschreven: {$names}.",
-                'not_registered' => $notRegistered->map(fn($p) => [
-                    'id' => $p->member_id,
-                    'name' => $p->member->first_name . ' ' . $p->member->last_name,
-                ])->values(),
-            ], 422);
-        }
-
-        $tournament->update(['phase' => 'inschrijvingen_compleet']);
-        return response()->json(['message' => 'Inschrijvingen zijn afgesloten. Fase gewijzigd naar "Inschrijvingen compleet".']);
     }
 }
