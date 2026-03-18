@@ -131,6 +131,8 @@ export default function TournamentDetailPage() {
     const [registrationConfirmResult, setRegistrationConfirmResult] = useState(null);
     const [unregisteringParticipant, setUnregisteringParticipant] = useState(null);
     const [removingFromList, setRemovingFromList] = useState(null);
+    const [completingRegistrations, setCompletingRegistrations] = useState(false);
+    const [completeResult, setCompleteResult] = useState(null);
 
     // Add participant state
     const [availableMembers, setAvailableMembers] = useState([]);
@@ -370,6 +372,30 @@ export default function TournamentDetailPage() {
             });
         } finally {
             setRemovingFromList(null);
+        }
+    }
+
+    async function completeRegistrationsAction() {
+        setCompletingRegistrations(true);
+        setCompleteResult(null);
+        try {
+            const res = await api.post(
+                `/api/tournaments/${id}/complete-registrations`,
+                {},
+                { headers: { Accept: "application/json" } }
+            );
+            setCompleteResult({ type: 'success', message: res.data.message });
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) setEligibleMembers(tournamentRes.data.eligible_members);
+            if (tournamentRes.data.phase) setPhase(tournamentRes.data.phase);
+        } catch (e) {
+            setCompleteResult({
+                type: 'error',
+                message: e?.response?.data?.message || e?.message || "Onbekende fout",
+                not_registered: e?.response?.data?.not_registered || [],
+            });
+        } finally {
+            setCompletingRegistrations(false);
         }
     }
 
@@ -820,6 +846,7 @@ export default function TournamentDetailPage() {
                                 >
                                     <option value="voorbereiding">Voorbereiding</option>
                                     <option value="inschrijvingen_uitvoeren">Inschrijvingen uitvoeren</option>
+                                    <option value="inschrijvingen_compleet" disabled>Inschrijvingen compleet (via knop)</option>
                                     <option value="afgelopen">Afgelopen</option>
                                 </select>
                                 {fe("phase")}
@@ -934,9 +961,14 @@ export default function TournamentDetailPage() {
                 </div>
 
                 <div className="px-4 py-4">
-                    {phase !== 'voorbereiding' && (
+                    {(phase === 'inschrijvingen_uitvoeren' || phase === 'afgelopen') && (
                         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
                             De inschrijvingsperiode is afgesloten. Deelnemers kunnen niet meer worden toegevoegd of verwijderd.
+                        </div>
+                    )}
+                    {phase === 'inschrijvingen_compleet' && (
+                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                            &#10003; Inschrijvingen zijn compleet. Alle deelnemers zijn ingeschreven.
                         </div>
                     )}
 
@@ -1026,6 +1058,31 @@ export default function TournamentDetailPage() {
                         </div>
                     )}
 
+                    {phase === 'inschrijvingen_uitvoeren' && (
+                        <div className="mb-4">
+                            <Button
+                                variant="success"
+                                size="sm"
+                                onClick={completeRegistrationsAction}
+                                disabled={completingRegistrations}
+                            >
+                                {completingRegistrations ? 'Bezig...' : 'Sluit inschrijvingen af'}
+                            </Button>
+                            {completeResult && (
+                                <div className={`mt-2 text-sm p-3 rounded-lg ${completeResult.type === 'success' ? 'text-green-800 bg-green-50' : 'text-red-800 bg-red-50'}`}>
+                                    <div className="font-medium">{completeResult.message}</div>
+                                    {completeResult.not_registered && completeResult.not_registered.length > 0 && (
+                                        <ul className="mt-1 list-disc list-inside text-xs">
+                                            {completeResult.not_registered.map(p => (
+                                                <li key={p.id}>{p.name}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {membersLoaded && (() => {
                         // Build age category order map from the loaded lookup list
                         const ageCategoryOrder = {};
@@ -1045,9 +1102,9 @@ export default function TournamentDetailPage() {
                         });
 
                         const acceptedParticipants = sortParticipants(
-                            eligibleMembers.filter(m => m.response_status === 'accepted' && m.registration_status !== 'verwijderd')
+                            eligibleMembers.filter(m => m.response_status === 'accepted' && m.registration_status !== 'verwijderd' && m.registration_status !== 'uitgeschreven')
                         );
-                        const nonAcceptedParticipants = eligibleMembers.filter(m => m.response_status !== 'accepted' || m.registration_status === 'verwijderd');
+                        const nonAcceptedParticipants = eligibleMembers.filter(m => m.response_status !== 'accepted' || m.registration_status === 'verwijderd' || m.registration_status === 'uitgeschreven');
 
                         const renderMemberRow = (member, showActions = true) => (
                             <tr key={member.id} className="hover:bg-slate-50 transition">

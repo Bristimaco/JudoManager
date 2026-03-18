@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tournaments/{tournament}/participants/{member}/confirm-registration', [TournamentController::class, 'confirmRegistration']);
     Route::post('/tournaments/{tournament}/participants/{member}/unregister', [TournamentController::class, 'unregisterParticipant']);
     Route::post('/tournaments/{tournament}/participants/{member}/remove-from-registration-list', [TournamentController::class, 'removeFromRegistrationList']);
+    Route::post('/tournaments/{tournament}/complete-registrations', [TournamentController::class, 'completeRegistrations']);
     Route::post('/tournaments/{tournament}/participants', [TournamentController::class, 'addParticipant']);
     Route::get('/tournaments/{tournament}/available-members', [TournamentController::class, 'availableMembers']);
 

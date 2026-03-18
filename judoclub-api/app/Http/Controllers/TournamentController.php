@@ -178,7 +178,7 @@ class TournamentController extends Controller
             'age_category_ids.*' => 'required|exists:lookups,id',
             'description' => 'nullable|string',
             'active' => 'boolean',
-            'phase' => 'nullable|in:voorbereiding,inschrijvingen_uitvoeren,afgelopen',
+            'phase' => 'nullable|in:voorbereiding,inschrijvingen_uitvoeren,inschrijvingen_compleet,afgelopen',
             'invitation_deadline' => 'nullable|date',
         ]);
 
@@ -749,5 +749,40 @@ class TournamentController extends Controller
 
         $participant->update(['registration_status' => 'verwijderd']);
         return response()->json(['message' => "{$member->first_name} {$member->last_name} is verplaatst naar de lijst met overige deelnemers."]);
+    }
+
+    /**
+     * Transition tournament to 'inschrijvingen_compleet' after verifying all accepted participants are ingeschreven.
+     */
+    public function completeRegistrations(Tournament $tournament)
+    {
+        if ($tournament->phase !== 'inschrijvingen_uitvoeren') {
+            return response()->json(['message' => 'Fase wijzigen naar "inschrijvingen compleet" is alleen mogelijk vanuit de fase "Inschrijvingen uitvoeren".'], 422);
+        }
+
+        // Find accepted participants whose registration is not yet confirmed or have been unregistered
+        // These are participants in the "bevestigde deelnemers" list (not in "overige deelnemers")
+        $notRegistered = $tournament->participants()
+            ->where('response_status', 'accepted')
+            ->where(function ($q) {
+                $q->whereNull('registration_status')
+                    ->orWhere('registration_status', 'uitgeschreven');
+            })
+            ->with('member')
+            ->get();
+
+        if ($notRegistered->isNotEmpty()) {
+            $names = $notRegistered->map(fn($p) => $p->member->first_name . ' ' . $p->member->last_name)->join(', ');
+            return response()->json([
+                'message' => "Niet alle deelnemers zijn ingeschreven. Nog niet ingeschreven: {$names}.",
+                'not_registered' => $notRegistered->map(fn($p) => [
+                    'id' => $p->member_id,
+                    'name' => $p->member->first_name . ' ' . $p->member->last_name,
+                ])->values(),
+            ], 422);
+        }
+
+        $tournament->update(['phase' => 'inschrijvingen_compleet']);
+        return response()->json(['message' => 'Inschrijvingen zijn afgesloten. Fase gewijzigd naar "Inschrijvingen compleet".']);
     }
 }
