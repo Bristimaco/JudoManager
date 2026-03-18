@@ -1,4 +1,3 @@
-// Added for DO migration
 <?php
 
 use Illuminate\Database\Migrations\Migration;
