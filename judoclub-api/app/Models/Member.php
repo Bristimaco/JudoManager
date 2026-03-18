@@ -18,6 +18,7 @@ class Member extends Model
         'age_category',
         'weight_category',
         'gender',
+        'photo',
     ];
 
     protected $casts = [

@@ -165,6 +165,7 @@ export default function Home() {
   const [dashLoading, setDashLoading] = useState(true);
   const [dashErr, setDashErr] = useState("");
   const [members, setMembers] = useState([]);
+  const [activeTournament, setActiveTournament] = useState(null);
 
   // Belt colors voor mapping belt naam -> kleur (consistent met andere components)
   const [beltColors, setBeltColors] = useState({});
@@ -208,8 +209,12 @@ export default function Home() {
     setDashLoading(true);
     setDashErr("");
     try {
-      const all = await fetchAllMembers();
-      setMembers(all);
+      const [membersData, activeTournamentRes] = await Promise.all([
+        fetchAllMembers(),
+        api.get("/api/tournaments/active", { headers: { Accept: "application/json" } }).catch(() => ({ data: { data: null } })),
+      ]);
+      setMembers(membersData);
+      setActiveTournament(activeTournamentRes.data?.data ?? null);
     } catch (e) {
       setDashErr(`Dashboard laden mislukt (${e?.response?.status ?? "no status"})`);
     } finally {
@@ -262,6 +267,39 @@ export default function Home() {
       {dashErr && (
         <div className="mb-4">
           <Alert variant="error">{dashErr}</Alert>
+        </div>
+      )}
+
+      {/* Gestart Toernooi - prominent bovenaan */}
+      {activeTournament && (
+        <div className="mb-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 p-6 text-white shadow-lg">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-2xl">🏁</span>
+                <span className="text-xs font-semibold uppercase tracking-wider opacity-80">Gestart Toernooi</span>
+              </div>
+              <div className="text-2xl font-bold">{activeTournament.name}</div>
+              <div className="mt-1 text-sm opacity-90">{activeTournament.address}</div>
+              {activeTournament.date && (
+                <div className="mt-1 text-sm opacity-80">
+                  {new Date(activeTournament.date).toLocaleDateString('nl-BE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+              )}
+              {activeTournament.age_categories?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {activeTournament.age_categories.map(cat => (
+                    <span key={cat.id} className="inline-block rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-medium">{cat.label}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Link to={`/tournaments/${activeTournament.id}`}>
+              <button className="shrink-0 rounded-xl bg-white/20 hover:bg-white/30 transition px-4 py-2 text-sm font-semibold">
+                Bekijk →
+              </button>
+            </Link>
+          </div>
         </div>
       )}
 

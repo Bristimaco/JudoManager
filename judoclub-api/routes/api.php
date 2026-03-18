@@ -38,7 +38,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', fn(Request $request) => $request->user());
 
     Route::apiResource('members', MemberController::class);
+    Route::post('/members/{member}/photo', [MemberController::class, 'uploadPhoto']);
+    Route::delete('/members/{member}/photo', [MemberController::class, 'deletePhoto']);
+
     Route::apiResource('lookups', LookupController::class)->except(['show']);
+    Route::get('/tournaments/active', [TournamentController::class, 'activeTournament']);
     Route::apiResource('tournaments', TournamentController::class);
 
     // Tournament eligible members
@@ -54,6 +58,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tournaments/{tournament}/participants/{member}/unregister', [TournamentController::class, 'unregisterParticipant']);
     Route::post('/tournaments/{tournament}/participants/{member}/remove-from-registration-list', [TournamentController::class, 'removeFromRegistrationList']);
     Route::post('/tournaments/{tournament}/complete-registrations', [TournamentController::class, 'completeRegistrations']);
+    Route::post('/tournaments/{tournament}/start', [TournamentController::class, 'startTournament']);
+    Route::post('/tournaments/{tournament}/stop', [TournamentController::class, 'stopTournament']);
+    Route::post('/tournaments/{tournament}/reset-phase', [TournamentController::class, 'resetPhase']);
     Route::post('/tournaments/{tournament}/participants', [TournamentController::class, 'addParticipant']);
     Route::get('/tournaments/{tournament}/available-members', [TournamentController::class, 'availableMembers']);
 
