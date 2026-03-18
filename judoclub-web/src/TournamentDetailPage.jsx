@@ -884,7 +884,8 @@ export default function TournamentDetailPage() {
                                 <select
                                     value={phase}
                                     onChange={(e) => setPhase(e.target.value)}
-                                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300"
+                                    disabled={phase !== 'voorbereiding' && phase !== 'inschrijvingen_uitvoeren'}
+                                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none transition focus:ring-4 focus:ring-slate-200 focus:border-slate-300 disabled:opacity-60"
                                 >
                                     <option value="voorbereiding">Voorbereiding</option>
                                     <option value="inschrijvingen_uitvoeren">Inschrijvingen uitvoeren</option>
