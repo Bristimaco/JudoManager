@@ -21,7 +21,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AuthProvider>
       <BrowserRouter basename="/judomanager-judoclub-web">
-      <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
 
