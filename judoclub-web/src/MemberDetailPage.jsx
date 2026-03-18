@@ -13,6 +13,8 @@ export default function MemberDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [deletingPhoto, setDeletingPhoto] = useState(false);
 
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
@@ -26,6 +28,7 @@ export default function MemberDetailPage() {
   const [belt, setBelt] = useState("");
   const [active, setActive] = useState(true);
   const [interestedInCompetition, setInterestedInCompetition] = useState(true);
+  const [photo, setPhoto] = useState(null); // Base64 photo
 
   const [belts, setBelts] = useState([]);
   const [beltsLoading, setBeltsLoading] = useState(true);
@@ -176,6 +179,7 @@ export default function MemberDetailPage() {
       setInterestedInCompetition(!!m.interested_in_competition);
       setAgeCategory(m.age_category ?? "");
       setWeightCategory(m.weight_category ?? "");
+      setPhoto(m.photo ?? null);
 
       // ✅ dit kan nu niet meer crashen door paginated lookups
       await loadWeightCategories(m.gender ?? "", m.age_category ?? "");
@@ -272,6 +276,57 @@ export default function MemberDetailPage() {
         setError(`Verwijderen mislukt (${status ?? e?.message ?? "no status"})`);
       }
       setDeleting(false);
+    }
+  }
+
+  async function onUploadPhoto(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    setError("");
+
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    try {
+      const res = await api.post(
+        `/api/members/${id}/photo`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      setPhoto(res.data.photo);
+    } catch (e) {
+      const status = e?.response?.status;
+      const data = e?.response?.data;
+
+      if (status === 422 && data?.errors) {
+        setFieldErrors(data.errors);
+        setError("Controleer de foto.");
+      } else {
+        setError(`Foto uploaden mislukt (${status ?? e?.message ?? "no status"})`);
+      }
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = ""; // Reset file input
+    }
+  }
+
+  async function onDeletePhoto() {
+    const ok = window.confirm("Ben je zeker dat je deze foto wil verwijderen?");
+    if (!ok) return;
+
+    setDeletingPhoto(true);
+    setError("");
+
+    try {
+      await api.delete(`/api/members/${id}/photo`, { headers: { Accept: "application/json" } });
+      setPhoto(null);
+    } catch (e) {
+      const status = e?.response?.status;
+      setError(`Foto verwijderen mislukt (${status ?? e?.message ?? "no status"})`);
+    } finally {
+      setDeletingPhoto(false);
     }
   }
 
@@ -447,6 +502,49 @@ export default function MemberDetailPage() {
             <label className="block text-sm font-medium text-slate-700">Licentienummer</label>
             <Input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} />
             {fe("license_number")}
+          </div>
+        </div>
+
+        {/* Foto Upload Section */}
+        <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-medium text-slate-700">Foto</label>
+            {photo && (
+              <Button
+                variant="danger"
+                size="sm"
+                type="button"
+                onClick={onDeletePhoto}
+                disabled={deletingPhoto}
+              >
+                {deletingPhoto ? "Verwijderen..." : "Verwijder foto"}
+              </Button>
+            )}
+          </div>
+
+          {photo ? (
+            <div className="mb-4">
+              <img
+                src={photo}
+                alt={memberName}
+                className="w-32 h-32 object-cover rounded-lg border border-slate-300"
+              />
+            </div>
+          ) : (
+            <div className="mb-4 w-32 h-32 bg-slate-200 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400 text-xs text-center">
+              Geen foto
+            </div>
+          )}
+
+          <div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onUploadPhoto}
+              disabled={uploadingPhoto}
+              className="block text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer"
+            />
+            <p className="text-xs text-slate-500 mt-2">Max 10MB, JPG/PNG/WebP</p>
           </div>
         </div>
 

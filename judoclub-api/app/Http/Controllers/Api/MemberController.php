@@ -100,4 +100,28 @@ class MemberController extends Controller
 
         return response()->json(['deleted' => true]);
     }
+
+    public function uploadPhoto(Request $request, Member $member)
+    {
+        $data = $request->validate([
+            'photo' => ['required', 'image', 'max:10240'], // max 10MB
+        ]);
+
+        $file = $request->file('photo');
+        $photoBase64 = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file));
+
+        $member->update(['photo' => $photoBase64]);
+
+        return response()->json([
+            'message' => 'Foto succesvol geupload',
+            'photo' => $photoBase64
+        ]);
+    }
+
+    public function deletePhoto(Member $member)
+    {
+        $member->update(['photo' => null]);
+
+        return response()->json(['message' => 'Foto verwijderd']);
+    }
 }

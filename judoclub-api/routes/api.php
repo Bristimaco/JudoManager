@@ -38,6 +38,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', fn(Request $request) => $request->user());
 
     Route::apiResource('members', MemberController::class);
+    Route::post('/members/{member}/photo', [MemberController::class, 'uploadPhoto']);
+    Route::delete('/members/{member}/photo', [MemberController::class, 'deletePhoto']);
+
     Route::apiResource('lookups', LookupController::class)->except(['show']);
     Route::get('/tournaments/active', [TournamentController::class, 'activeTournament']);
     Route::apiResource('tournaments', TournamentController::class);
