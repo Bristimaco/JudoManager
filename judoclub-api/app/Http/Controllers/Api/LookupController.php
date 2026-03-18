@@ -52,6 +52,7 @@ class LookupController extends Controller
             'label' => ['required', 'string', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'min_age' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'age_category' => ['nullable', 'string', 'max:100'],
             'color' => ['nullable', 'string', Rule::in(['wit', 'geel', 'oranje', 'groen', 'blauw', 'bruin', 'zwart'])],
             'active' => ['sometimes', 'boolean'],
         ]);
@@ -61,6 +62,11 @@ class LookupController extends Controller
         // Forceer gender = null behalve voor weight_categories
         if ($data['type'] !== 'weight_categories') {
             $data['gender'] = null;
+        }
+
+        // Forceer age_category = null behalve voor weight_categories
+        if ($data['type'] !== 'weight_categories') {
+            $data['age_category'] = null;
         }
 
         // Forceer min_age = null behalve voor age_categories  
@@ -73,7 +79,7 @@ class LookupController extends Controller
             $data['color'] = null;
         }
 
-        // Unique per type + gender(NULL-safe) + label
+        // Unique per type + gender(NULL-safe) + age_category(NULL-safe) + label
         $existsQuery = Lookup::where('type', $data['type'])
             ->where('label', $data['label']);
 
@@ -83,10 +89,16 @@ class LookupController extends Controller
             $existsQuery->where('gender', $data['gender']);
         }
 
+        if (is_null($data['age_category'])) {
+            $existsQuery->whereNull('age_category');
+        } else {
+            $existsQuery->where('age_category', $data['age_category']);
+        }
+
         if ($existsQuery->exists()) {
             return response()->json([
-                'message' => 'Deze waarde bestaat al voor dit type.',
-                'errors' => ['label' => ['Deze waarde bestaat al.']],
+                'message' => 'Deze combinatie bestaat al.',
+                'errors' => ['label' => ['Deze combinatie van waarden bestaat al.']],
             ], 422);
         }
 
@@ -105,6 +117,7 @@ class LookupController extends Controller
             'label' => ['required', 'string', 'max:100'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'min_age' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'age_category' => ['nullable', 'string', 'max:100'],
             'color' => ['nullable', 'string', Rule::in(['wit', 'geel', 'oranje', 'groen', 'blauw', 'bruin', 'zwart'])],
             'active' => ['sometimes', 'boolean'],
         ]);
@@ -114,6 +127,11 @@ class LookupController extends Controller
         // Forceer gender = null behalve voor weight_categories
         if ($lookup->type !== 'weight_categories') {
             $data['gender'] = null;
+        }
+
+        // Forceer age_category = null behalve voor weight_categories
+        if ($lookup->type !== 'weight_categories') {
+            $data['age_category'] = null;
         }
 
         // Forceer min_age = null behalve voor age_categories
@@ -126,7 +144,7 @@ class LookupController extends Controller
             $data['color'] = null;
         }
 
-        // Unique per type + gender + label (excluding current)
+        // Unique per type + gender(NULL-safe) + age_category(NULL-safe) + label (excluding current)
         $exists = Lookup::where('type', $lookup->type)
             ->where('label', $data['label'])
             ->where('id', '!=', $lookup->id)
@@ -135,12 +153,17 @@ class LookupController extends Controller
                 fn($q) => $q->whereNull('gender'),
                 fn($q) => $q->where('gender', $data['gender'])
             )
+            ->when(
+                is_null($data['age_category']),
+                fn($q) => $q->whereNull('age_category'),
+                fn($q) => $q->where('age_category', $data['age_category'])
+            )
             ->exists();
 
         if ($exists) {
             return response()->json([
-                'message' => 'Deze waarde bestaat al voor dit type.',
-                'errors' => ['label' => ['Deze waarde bestaat al.']],
+                'message' => 'Deze combinatie bestaat al.',
+                'errors' => ['label' => ['Deze combinatie van waarden bestaat al.']],
             ], 422);
         }
 

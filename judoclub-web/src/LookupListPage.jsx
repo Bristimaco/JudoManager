@@ -18,6 +18,8 @@ export default function LookupListPage() {
     const [items, setItems] = useState([]);
     const [label, setLabel] = useState("");
     const [gender, setGender] = useState(""); // geen default hardcoded
+    const [ageCategory, setAgeCategory] = useState(""); // voor weight_categories
+    const [ageCategories, setAgeCategories] = useState([]); // voor weight_categories dropdown
     const [sortOrder, setSortOrder] = useState("0");
     const [minAge, setMinAge] = useState(""); // voor age categories
     const [color, setColor] = useState(""); // voor belts
@@ -88,6 +90,8 @@ export default function LookupListPage() {
         if (type !== "weight_categories") {
             setGenderMeta(null);
             setGender("");
+            setAgeCategories([]);
+            setAgeCategory("");
             return;
         }
 
@@ -106,9 +110,20 @@ export default function LookupListPage() {
             setGenderMeta(g);
             // default: eerste enum waarde
             setGender((prev) => (prev && g.values.includes(prev) ? prev : g.values[0]));
+
+            // Load age categories
+            const ageRes = await api.get("/api/lookups", {
+                params: { type: "age_categories", per_page: 200 },
+                headers: { Accept: "application/json" },
+            });
+            const ageCatData = Array.isArray(ageRes.data) ? ageRes.data : ageRes.data?.data ?? [];
+            setAgeCategories(ageCatData.filter((x) => x.active));
+            setAgeCategory("");
         } catch (e) {
             setGenderMeta(null);
             setGender("");
+            setAgeCategories([]);
+            setAgeCategory("");
             setErr(`Meta laden mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
         }
     }
@@ -136,6 +151,7 @@ export default function LookupListPage() {
                 {
                     type,
                     ...(type === "weight_categories" ? { gender } : {}),
+                    ...(type === "weight_categories" && ageCategory ? { age_category: ageCategory } : {}),
                     ...(type === "age_categories" && minAge ? { min_age: Number(minAge) } : {}),
                     ...(type === "belts" && color ? { color } : {}),
                     label,
@@ -149,6 +165,7 @@ export default function LookupListPage() {
             setSortOrder("0");
             setMinAge("");
             setColor("");
+            setAgeCategory("");
             setActive(true);
 
             // reset gender terug naar eerste enum waarde (als weight)
@@ -174,6 +191,7 @@ export default function LookupListPage() {
                     sort_order: item.sort_order,
                     ...(item.min_age !== undefined && item.min_age !== null ? { min_age: item.min_age } : {}),
                     ...(item.color ? { color: item.color } : {}),
+                    ...(item.age_category ? { age_category: item.age_category } : {}),
                     active: !item.active,
                     ...(type === "weight_categories" ? { gender: item.gender } : {}),
                 },
@@ -194,6 +212,7 @@ export default function LookupListPage() {
                     sort_order: item.sort_order,
                     min_age: newMinAge ? Number(newMinAge) : null,
                     ...(item.color ? { color: item.color } : {}),
+                    ...(item.age_category ? { age_category: item.age_category } : {}),
                     active: item.active,
                     ...(type === "weight_categories" ? { gender: item.gender } : {}),
                 },
@@ -277,25 +296,43 @@ export default function LookupListPage() {
                 </div>
 
                 {type === "weight_categories" && (
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700">Geslacht</label>
-                        <select
-                            value={gender}
-                            onChange={(e) => setGender(e.target.value)}
-                            disabled={!genderMeta}
-                            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm disabled:bg-slate-100"
-                        >
-                            {!genderMeta ? (
-                                <option value="">(Genders laden...)</option>
-                            ) : (
-                                genderMeta.values.map((v) => (
-                                    <option key={v} value={v}>
-                                        {genderLabel(v)}
+                    <>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">Geslacht</label>
+                            <select
+                                value={gender}
+                                onChange={(e) => setGender(e.target.value)}
+                                disabled={!genderMeta}
+                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm disabled:bg-slate-100"
+                            >
+                                {!genderMeta ? (
+                                    <option value="">(Genders laden...)</option>
+                                ) : (
+                                    genderMeta.values.map((v) => (
+                                        <option key={v} value={v}>
+                                            {genderLabel(v)}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">Leeftijdscategorie</label>
+                            <select
+                                value={ageCategory}
+                                onChange={(e) => setAgeCategory(e.target.value)}
+                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
+                            >
+                                <option value="">(Geen)</option>
+                                {ageCategories.map((cat) => (
+                                    <option key={cat.id} value={cat.label}>
+                                        {cat.label}
                                     </option>
-                                ))
-                            )}
-                        </select>
-                    </div>
+                                ))}
+                            </select>
+                        </div>
+                    </>
                 )}
 
                 {type === "age_categories" && (
@@ -381,6 +418,7 @@ export default function LookupListPage() {
                                 <tr className="text-left text-slate-600 border-b">
                                     <th className="py-3 pr-4">Waarde</th>
                                     {type === "weight_categories" && <th className="py-3 pr-4">Geslacht</th>}
+                                    {type === "weight_categories" && <th className="py-3 pr-4">Leeftijdscategorie</th>}
                                     {type === "age_categories" && <th className="py-3 pr-4">Min. Leeftijd</th>}
                                     {type === "belts" && <th className="py-3 pr-4">Kleur</th>}
                                     <th className="py-3 pr-4">Volgorde</th>
@@ -393,7 +431,10 @@ export default function LookupListPage() {
                                     <tr key={it.id} className="border-b last:border-b-0 hover:bg-slate-50">
                                         <td className="py-3 pr-4 font-medium text-slate-900">{it.label}</td>
                                         {type === "weight_categories" && (
-                                            <td className="py-3 pr-4 text-slate-700">{genderLabel(it.gender)}</td>
+                                            <>
+                                                <td className="py-3 pr-4 text-slate-700">{genderLabel(it.gender)}</td>
+                                                <td className="py-3 pr-4 text-slate-700">{it.age_category || "-"}</td>
+                                            </>
                                         )}
                                         {type === "age_categories" && (
                                             <td className="py-3 pr-4 text-slate-700">
