@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Enums\Gender;
 use App\Http\Controllers\Api\MemberImportExportController;
+use App\Http\Controllers\Api\LookupImportExportController;
 
 Route::get('/health', function () {
     return response()->json([
@@ -19,6 +20,9 @@ Route::get('/health', function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/members/export', [MemberImportExportController::class, 'export']);
     Route::post('/members/import', [MemberImportExportController::class, 'import']);
+    
+    Route::get('/lookups/export', [LookupImportExportController::class, 'export']);
+    Route::post('/lookups/import', [LookupImportExportController::class, 'import']);
 });
 
 Route::middleware('auth:sanctum')->get('/meta', function () {

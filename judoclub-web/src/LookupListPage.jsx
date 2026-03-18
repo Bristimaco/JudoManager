@@ -258,6 +258,58 @@ export default function LookupListPage() {
         }
     }
 
+    async function handleExport() {
+        setErr("");
+        try {
+            const response = await api.get("/api/lookups/export", {
+                params: { type },
+                responseType: 'blob',
+            });
+            
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${type}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            setErr(`Export mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
+        }
+    }
+
+    async function handleImport(e) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setErr("");
+        setSaving(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await api.post('/api/lookups/import', formData, {
+                params: { type },
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            const result = response.data;
+            const message = `${result.inserted} toegevoegd, ${result.updated} bijgewerkt, ${result.skipped} overgeslagen.`;
+            setErr(result.errors?.length > 0 
+                ? `${message}\nFouten: ${result.errors.map(e => `Rij ${e.row}: ${e.message}`).join('\n')}` 
+                : message);
+            
+            await load();
+        } catch (e) {
+            setErr(`Import mislukt (${e?.response?.status ?? e?.message ?? "no status"})`);
+        } finally {
+            setSaving(false);
+            e.target.value = '';
+        }
+    }
+
     const rows = useMemo(() => items, [items]);
     const genderLabel = (v) => genderMeta?.labels?.[v] ?? v ?? "-";
 
@@ -271,16 +323,35 @@ export default function LookupListPage() {
             title={pageMeta.title}
             subtitle={pageMeta.subtitle}
             actions={
-                <Button
-                    variant="primary"
-                    onClick={() => {
-                        load();
-                        if (type === "weight_categories") loadMeta();
-                    }}
-                    disabled={loading}
-                >
-                    Refresh
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="primary"
+                        onClick={() => {
+                            load();
+                            if (type === "weight_categories") loadMeta();
+                        }}
+                        disabled={loading}
+                    >
+                        Refresh
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={handleExport}
+                        disabled={loading || items.length === 0}
+                    >
+                        Exporteren
+                    </Button>
+                    <label className="appearance-none inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition bg-white text-slate-900 border border-slate-300 hover:bg-slate-100 focus:ring-4 focus:ring-slate-200 disabled:opacity-60 cursor-pointer" style={{pointerEvents: saving ? 'none' : 'auto', opacity: saving ? 0.6 : 1}}>
+                        Importeren
+                        <input
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleImport}
+                            disabled={saving}
+                            style={{ display: 'none' }}
+                        />
+                    </label>
+                </div>
             }
         >
             {err && (
