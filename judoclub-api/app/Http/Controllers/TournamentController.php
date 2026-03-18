@@ -760,14 +760,12 @@ class TournamentController extends Controller
             return response()->json(['message' => 'Fase wijzigen naar "inschrijvingen compleet" is alleen mogelijk vanuit de fase "Inschrijvingen uitvoeren".'], 422);
         }
 
-        // Find accepted participants whose registration is not yet confirmed or have been unregistered
-        // These are participants in the "bevestigde deelnemers" list (not in "overige deelnemers")
+        // Find accepted participants whose registration is not yet confirmed
+        // Deelnemers die zijn uitgeschreven (status = 'uitgeschreven') mogen het afsluiten niet blokkeren
+        // Alleen deelnemers zonder inschrijving (status = NULL) blokkeren
         $notRegistered = $tournament->participants()
             ->where('response_status', 'accepted')
-            ->where(function ($q) {
-                $q->whereNull('registration_status')
-                    ->orWhere('registration_status', 'uitgeschreven');
-            })
+            ->whereNull('registration_status')
             ->with('member')
             ->get();
 
