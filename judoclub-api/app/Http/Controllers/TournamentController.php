@@ -828,6 +828,15 @@ class TournamentController extends Controller
     }
 
     /**
+     * Reset tournament phase to 'inschrijvingen_uitvoeren' (useful for testing/recovery)
+     */
+    public function resetPhase(Tournament $tournament)
+    {
+        $tournament->update(['phase' => 'inschrijvingen_uitvoeren']);
+        return response()->json(['message' => 'Toernooi fase reset naar "Inschrijvingen Uitvoeren". Je kunt de flow nu hervatten.']);
+    }
+
+    /**
      * Return the currently started tournament (if any).
      */
     public function activeTournament()

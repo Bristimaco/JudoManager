@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tournaments/{tournament}/complete-registrations', [TournamentController::class, 'completeRegistrations']);
     Route::post('/tournaments/{tournament}/start', [TournamentController::class, 'startTournament']);
     Route::post('/tournaments/{tournament}/stop', [TournamentController::class, 'stopTournament']);
+    Route::post('/tournaments/{tournament}/reset-phase', [TournamentController::class, 'resetPhase']);
     Route::post('/tournaments/{tournament}/participants', [TournamentController::class, 'addParticipant']);
     Route::get('/tournaments/{tournament}/available-members', [TournamentController::class, 'availableMembers']);
 

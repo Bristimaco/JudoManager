@@ -403,8 +403,11 @@ export default function TournamentDetailPage() {
         if (!window.confirm('Wil je dit toernooi starten? Er kan maar 1 toernooi tegelijk gestart zijn.')) return;
         try {
             const res = await api.post(`/api/tournaments/${id}/start`, {}, { headers: { Accept: "application/json" } });
-            setPhase('gestart');
             setCompleteResult({ type: 'success', message: res.data.message });
+            // Reload tournament data to sync phase and participants
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) setEligibleMembers(tournamentRes.data.eligible_members);
+            if (tournamentRes.data.phase) setPhase(tournamentRes.data.phase);
         } catch (e) {
             setCompleteResult({ type: 'error', message: e?.response?.data?.message || "Starten mislukt" });
         }
@@ -414,10 +417,27 @@ export default function TournamentDetailPage() {
         if (!window.confirm('Wil je dit toernooi beëindigen? De fase wordt gezet op "Afgelopen".')) return;
         try {
             const res = await api.post(`/api/tournaments/${id}/stop`, {}, { headers: { Accept: "application/json" } });
-            setPhase('afgelopen');
             setCompleteResult({ type: 'success', message: res.data.message });
+            // Reload tournament data to sync phase and participants
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) setEligibleMembers(tournamentRes.data.eligible_members);
+            if (tournamentRes.data.phase) setPhase(tournamentRes.data.phase);
         } catch (e) {
             setCompleteResult({ type: 'error', message: e?.response?.data?.message || "Stoppen mislukt" });
+        }
+    }
+
+    async function resetPhaseAction() {
+        if (!window.confirm('Wil je de fase herstellen naar "Inschrijvingen Uitvoeren"? Je kunt dan de flow opnieuw starten.')) return;
+        try {
+            const res = await api.post(`/api/tournaments/${id}/reset-phase`, {}, { headers: { Accept: "application/json" } });
+            setCompleteResult({ type: 'success', message: res.data.message });
+            // Reload tournament data to sync phase and participants
+            const tournamentRes = await api.get(`/api/tournaments/${id}`, { headers: { Accept: "application/json" } });
+            if (tournamentRes.data.eligible_members) setEligibleMembers(tournamentRes.data.eligible_members);
+            if (tournamentRes.data.phase) setPhase(tournamentRes.data.phase);
+        } catch (e) {
+            setCompleteResult({ type: 'error', message: e?.response?.data?.message || "Reset mislukt" });
         }
     }
 
@@ -869,6 +889,7 @@ export default function TournamentDetailPage() {
                                     <option value="voorbereiding">Voorbereiding</option>
                                     <option value="inschrijvingen_uitvoeren">Inschrijvingen uitvoeren</option>
                                     <option value="inschrijvingen_compleet" disabled>Inschrijvingen compleet (via knop)</option>
+                                    <option value="gestart" disabled>Gestart (via knop)</option>
                                     <option value="afgelopen">Afgelopen</option>
                                 </select>
                                 {fe("phase")}
@@ -1133,6 +1154,26 @@ export default function TournamentDetailPage() {
                                 onClick={stopTournamentAction}
                             >
                                 Beëindig Toernooi
+                            </Button>
+                            {completeResult && (
+                                <div className={`mt-2 text-sm p-3 rounded-lg ${completeResult.type === 'success' ? 'text-green-800 bg-green-50' : 'text-red-800 bg-red-50'}`}>
+                                    <div className="font-medium">{completeResult.message}</div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {phase === 'afgelopen' && (
+                        <div className="mb-4 space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-medium text-slate-800 bg-slate-100 p-3 rounded-lg">
+                                <span>✅ Dit toernooi is afgelopen.</span>
+                            </div>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={resetPhaseAction}
+                            >
+                                🔄 Herstellen naar Inschrijvingen Uitvoeren
                             </Button>
                             {completeResult && (
                                 <div className={`mt-2 text-sm p-3 rounded-lg ${completeResult.type === 'success' ? 'text-green-800 bg-green-50' : 'text-red-800 bg-red-50'}`}>
